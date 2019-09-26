@@ -9,16 +9,31 @@
       Default: DevVPC
       MinLength: 1
 
+    Environment:
+      Type: String
+      Default: Dev
+      MinLength: 1
+      AllowedValues:
+        - Dev
+        - Prod
+
+  Conditions:
+    IfProd: !Equals [ !Ref Environment, "Prod" ]
+
   Mappings:
     SubnetConfig:
       VPC:
-        CIDR: "172.16.0.0/16"
+        Dev: "172.16.0.0/16"
+        Prod: "10.0.0.0/16"
       Public0:
-        CIDR: "172.16.0.0/24"
+        Dev: "172.16.0.0/24"
+        Prod: "10.0.0.0/24"
       Private0:
-        CIDR: "172.16.1.0/24"
+        Dev: "172.16.1.0/24"
+        Prod: "10.0.1.0/24"
       Private1:
-        CIDR: "172.16.2.0/24"
+        Dev: "172.16.2.0/24"
+        Prod: "10.0.2.0/24"
 
     AZRegions:
       us-east-1:
@@ -33,8 +48,10 @@
       Properties:
         EnableDnsSupport: "true"
         EnableDnsHostnames: "true"
-        CidrBlock: !FindInMap [ "SubnetConfig", "VPC", "CIDR" ]
+        CidrBlock: !FindInMap [ "SubnetConfig", "VPC", !Ref Environment ]
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Public"
           - Key: "Name"
@@ -49,9 +66,11 @@
           Fn::Sub:
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
-        CidrBlock: !FindInMap [ "SubnetConfig", "Public0", "CIDR" ]
+        CidrBlock: !FindInMap [ "SubnetConfig", "Puclic0", !Ref Environment ]
         MapPublicIpOnLaunch: "true"
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Public"
           - Key: "Name"
@@ -65,8 +84,10 @@
           Fn::Sub:
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
-        CidrBlock: !FindInMap [ "SubnetConfig", "Private0", "CIDR" ]
+        CidrBlock: !FindInMap [ "SubnetConfig", "Private0", !Ref Environment ]
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Private"
           - Key: "Name"
@@ -80,8 +101,10 @@
           Fn::Sub:
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
-        CidrBlock: !FindInMap [ "SubnetConfig", "Private1", "CIDR" ]
+        CidrBlock: !FindInMap [ "SubnetConfig", "Private1", !Ref Environment ]
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Private"
           - Key: "Name"
@@ -91,6 +114,8 @@
       Type: "AWS::EC2::InternetGateway"
       Properties:
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Public"
 
@@ -105,6 +130,8 @@
       Properties:
         VpcId: !Ref "VPC"
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Public"
 
@@ -127,6 +154,8 @@
       Properties:
         VpcId: !Ref "VPC"
         Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
           - Key: "Network"
             Value: "Public"
 
