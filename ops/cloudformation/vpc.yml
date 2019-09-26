@@ -9,25 +9,6 @@
       Default: DevVPC
       MinLength: 1
 
-    Environment:
-      Type: String
-      Default: Dev
-      MinLength: 1
-      AllowedValues:
-        - Dev
-        - Prod
-
-    RegionToDeploy:
-      Type: String
-      Default: us-east-1
-      MinLength: 1
-      AllowedValues:
-        - us-east-1
-        - us-west-1
-
-#  Conditions:
-#    IfProd: !Equals [ !Ref Environment, "Prod" ]
-
   Mappings:
     SubnetConfig:
       VPC:
