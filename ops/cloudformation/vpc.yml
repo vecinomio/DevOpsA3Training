@@ -66,7 +66,7 @@
           Fn::Sub:
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
-        CidrBlock: !FindInMap [ "SubnetConfig", "Puclic0", !Ref Environment ]
+        CidrBlock: !FindInMap [ "SubnetConfig", "Public0", !Ref Environment ]
         MapPublicIpOnLaunch: "true"
         Tags:
           - Key: "Environment"
@@ -255,3 +255,25 @@
       Value: !Ref "PrivateSubnet1"
       Export:
         Name: !Sub "${AWS::StackName}-PrivateSubnet1"
+
+    DeployRegion:
+      Description: "Region, where stack deployed"
+      Value: !Ref "AWS::Region"
+      Export:
+        Type: String
+        Name: !Sub "${AWS::StackName}-Region"
+
+    RouteTablePeerRef:
+      Description: "Route table for adding route in case of peering"
+      Value: !Ref "PublicRouteTable"
+      Export:
+        Type: String
+        Name: !Sub "${AWS::StackName}-RouteTablePeerRef"
+
+    PeerCIDRRef:
+      Description: "Prod CIDR to add in route table in case of peering"
+      Value: !FindInMap [ "SubnetConfig", "VPC", "Prod" ]
+      Export:
+        Type: String
+        Name: !Sub "${AWS::StackName}-PeerCIDRRef"
+
