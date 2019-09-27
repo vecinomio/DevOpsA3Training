@@ -1,0 +1,71 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'Public and private DNS zone'
+
+Parameters:
+  PrivateName:
+    Description: 'The name of the domain'
+    Type: String
+    Default: example.com
+
+  PublicName:
+    Description: 'The name of the domain'
+    Type: String
+    Default: devopsa3train.co.uk
+
+  DevVPCStackName:
+    Type: String
+    Default: DevVPC
+
+  ProdVPCStackName:
+    Type: String
+    Default: ProdVPC
+
+Resources:
+
+  PrivateHostedZone:
+    Type: 'AWS::Route53::HostedZone'
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub "${PrivateName} private DNS zone"
+      Name: !Ref PrivateName
+      VPCs:
+      - VPCId: {'Fn::ImportValue': !Sub '${DevVPCStackName}-VPCId'}
+        VPCRegion: {'Fn::ImportValue': !Sub '${DevVPCStackName}-Region'}
+      - VPCId: {'Fn::ImportValue': !Sub '${ProdVPCStackName}-VPCId'}
+        VPCRegion: {'Fn::ImportValue': !Sub '${ProdVPCStackName}-Region'}
+
+  PublicHostedZone:
+    Type: 'AWS::Route53::HostedZone'
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub "${PublicName} public DNS zone"
+      Name: !Ref PublicName
+
+
+Outputs:
+
+  PrivateZoneName:
+    Description: 'The name of the private hosted zone.'
+    Value: !Ref PrivateName
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateZoneName'
+
+  PrivateZoneId:
+    Description: 'The ID of the private hosted zone.'
+    Value: !Ref PrivateHostedZone
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateZoneId'
+
+  PublicZoneName:
+    Description: 'The name of the public hosted zone.'
+    Value: !Ref PublicName
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicZoneName'
+
+  PublicZoneId:
+    Description: 'The ID of the public hosted zone.'
+    Value: !Ref PublicHostedZone
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicZoneId'
