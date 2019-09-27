@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+#add ASG here too
+
+Parameters:
+
+  PrivateHostedZone:
+    Type: String
+    Default: 'example.com'
+    Description: Base DNS domain name
+
+  PublicHostedZone:
+    Type: String
+    Default: 'devopsa3train.me.uk'
+    Description: Base DNS domain name
+
+  R53DNSName:
+    Type: String
+    Default: 'bastion'
+
+  R53StackName:
+    Type: String
+    Default: 'route53zones'
+
+Resources:
+  ElasticIP:
+    Type: AWS::EC2::EIP
+
+  R53PrivateRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', [{'Fn::ImportValue': !Sub '${R53StackName}-PrivateZoneId'}, .]]
+      Name: !Join ['', [ !Ref R53DNSName, ., {'Fn::ImportValue': !Sub '${R53StackName}-PrivateZoneId', .]]
+#      HostedZoneName: !Join ['', [!Ref PrivateHostedZone, .]]
+#      Name: !Join ['', [ !Ref R53DNSName, ., !Ref PrivateHostedZone, .]]
+      Type: A
+      TTL: 300
+#      ResourceRecords: [ !Ref ElasticIP ]
+
+  R53PublicRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', [{'Fn::ImportValue': !Sub '${R53StackName}-PublicZoneId'}, .]]
+      Name: !Join ['', [ !Ref R53DNSName, ., {'Fn::ImportValue': !Sub '${R53StackName}-PublicZoneId', .]]
+#      HostedZoneName: !Join ['', [!Ref PublicHostedZone, .]]
+#      Name: !Join ['', [ !Ref R53DNSName, ., !Ref PublicHostedZone, .]]
+      Type: A
+      TTL: 300
+      ResourceRecords: [ !Ref ElasticIP ]
+
+Outputs:
+  ElasticIP:
+    Description: bastion Elastic IP
+    Value: !GetAtt ElasticIP.AllocationId
+    Export:
+      Name: !Sub "${AWS::StackName}-ElasticIP"
