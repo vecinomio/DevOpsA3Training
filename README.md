@@ -19,7 +19,7 @@ This instructions provide how to create infrastructure in AWS according to the i
 
 # TODO:
 1. Clone repository from github
-2. Check you default region in AWS (This templates uses us-east-1 region)
+2. Check you default region in AWS (Those templates uses us-east-1 region)
 3. Create VPC infrastructure:
    - run command: aws cloudformation deploy --stack-name A3-VPC --template-file .../path/to/vpc.yaml
 4. Create Bastion-host AutoScaling Group:
