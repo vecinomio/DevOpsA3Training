@@ -1,0 +1,75 @@
+  AWSTemplateFormatVersion: "2010-09-09"
+
+  Description: "Creates a Launch Configuration with Bastion host and
+  Auto Scaling Group for Bastion in Public subnet 0"
+
+  Parameters:
+    VPCStackName:
+      Type: String
+      Default: DevVPC
+      MinLength: 1
+      AllowedValues:
+        - DevVPC
+        - ProdVPC
+    KeyName:
+      Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+      Type: 'AWS::EC2::KeyPair::KeyName'
+      Default: imaki_NVirginia
+      ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    SSHLocation:
+      Description: The IP address range that can be used to SSH to the EC2 instances
+      Type: String
+      Default: 0.0.0.0/0
+      ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    InstanceType:
+      Type: String
+      Description: Type of EC2 instance.
+      Default: t2.micro
+      AllowedValues:
+        - t2.micro
+        - t2.small
+        - t2.medium
+      ConstraintDescription: Must be a valid EC2 instance type.
+
+  Mappings:
+    RegionMap:
+      us-east-1:
+        AMI: ami-0080e4c5bc078760e # Amazon Linux 2
+
+  Resources:
+    BastionSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+        GroupDescription: Enable SSH access via port 22
+        VpcId:
+          Fn::ImportValue: "DevVPC-VPCId"
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: '22'
+            ToPort: '22'
+            CidrIp: !Ref SSHLocation
+
+    LaunchConfig:
+      Type: "AWS::AutoScaling::LaunchConfiguration"
+      Properties:
+        AssociatePublicIpAddress: "true"
+        ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroups:
+          - !Ref BastionSecurityGroup
+
+
+    BastionAutoScalingGroup:
+      Type: "AWS::AutoScaling::AutoScalingGroup"
+      Properties:
+        VPCZoneIdentifier:
+          - Fn::ImportValue: "DevVPC-PublicSubnet0"
+        LaunchConfigurationName: !Ref LaunchConfig
+        MinSize: "1"
+        MaxSize: "1"
+        DesiredCapacity: "1"
+        Tags:
+          - Key: "Name"
+            Value: A3-ASG-bastion
+            PropagateAtLaunch: true
