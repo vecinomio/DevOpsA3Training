@@ -4,51 +4,42 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Public and private DNS zone'
 
 Parameters:
-  PrivateName:
+  PrivateDomainName:
     Description: 'The name of the domain'
     Type: String
     Default: example.com
 
-  PublicName:
+  PublicDomainName:
     Description: 'The name of the domain'
     Type: String
     Default: devopsa3train.co.uk
 
-  DevVPCStackName:
+  VPCStackNameToAssociate:
     Type: String
-    Default: DevVPC
-
-  ProdVPCStackName:
-    Type: String
-    Default: ProdVPC
+    MinLength: 1
 
 Resources:
-
   PrivateHostedZone:
     Type: 'AWS::Route53::HostedZone'
     Properties:
       HostedZoneConfig:
-        Comment: !Sub "${PrivateName} private DNS zone"
-      Name: !Ref PrivateName
+        Comment: !Sub "${PrivateDomainName} private DNS zone"
+      Name: !Ref PrivateDomainName
       VPCs:
-      - VPCId: {'Fn::ImportValue': !Sub '${DevVPCStackName}-VPCId'}
-        VPCRegion: {'Fn::ImportValue': !Sub '${DevVPCStackName}-Region'}
-      - VPCId: {'Fn::ImportValue': !Sub '${ProdVPCStackName}-VPCId'}
-        VPCRegion: {'Fn::ImportValue': !Sub '${ProdVPCStackName}-Region'}
+      - VPCId: {'Fn::ImportValue': !Sub '${VPCStackNameToAssociate}-VPCId'}
+        VPCRegion: {'Fn::ImportValue': !Sub '${VPCStackNameToAssociate}-Region'}
 
   PublicHostedZone:
     Type: 'AWS::Route53::HostedZone'
     Properties:
       HostedZoneConfig:
-        Comment: !Sub "${PublicName} public DNS zone"
-      Name: !Ref PublicName
-
+        Comment: !Sub "${PublicDomainName} public DNS zone"
+      Name: !Ref PublicDomainName
 
 Outputs:
-
   PrivateZoneName:
     Description: 'The name of the private hosted zone.'
-    Value: !Ref PrivateName
+    Value: !Ref PrivateDomainName
     Export:
       Name: !Sub '${AWS::StackName}-PrivateZoneName'
 
@@ -60,7 +51,7 @@ Outputs:
 
   PublicZoneName:
     Description: 'The name of the public hosted zone.'
-    Value: !Ref PublicName
+    Value: !Ref PublicDomainName
     Export:
       Name: !Sub '${AWS::StackName}-PublicZoneName'
 
