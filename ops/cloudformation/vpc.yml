@@ -1,3 +1,16 @@
+# Creates VPC stack with one public and two private subnets (one in each AZ),
+# and NAT Gateway
+#
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name <stack name>               \
+#                           --template-file ops/cloudformation/vpc.yml  \
+#                           --parameter-overrides                       \
+#                             Environment=<Dev or Prod>                  \
+#                           --tags                                       \
+#                             t1=v1                                      \
+#                             t2=v2                                      \
+#                           --region <region>                           \
+#                           --profile <profile>
 ---
   AWSTemplateFormatVersion: "2010-09-09"
 
