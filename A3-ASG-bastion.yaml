@@ -6,8 +6,6 @@
   Parameters:
     VPCStackName:
       Type: String
-      Default: DevVPC
-      MinLength: 1
       AllowedValues:
         - DevVPC
         - ProdVPC
@@ -35,14 +33,15 @@
     RegionMap:
       us-east-1:
         AMI: ami-0080e4c5bc078760e # Amazon Linux 2
-
+      us-west-1:
+        AMI: ami-0080e4c5bc078760e # Amazon Linux 2
   Resources:
     BastionSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
         GroupDescription: Enable SSH access via port 22
         VpcId:
-          Fn::ImportValue: "DevVPC-VPCId"
+          Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
         SecurityGroupIngress:
           - IpProtocol: tcp
             FromPort: '22'
@@ -58,13 +57,15 @@
         KeyName: !Ref KeyName
         SecurityGroups:
           - !Ref BastionSecurityGroup
-
+        BlockDeviceMappings:
+          - DeviceName: /dev/sdc
+            VirtualName: ephemeral0
 
     BastionAutoScalingGroup:
       Type: "AWS::AutoScaling::AutoScalingGroup"
       Properties:
         VPCZoneIdentifier:
-          - Fn::ImportValue: "DevVPC-PublicSubnet0"
+          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
         LaunchConfigurationName: !Ref LaunchConfig
         MinSize: "1"
         MaxSize: "1"
