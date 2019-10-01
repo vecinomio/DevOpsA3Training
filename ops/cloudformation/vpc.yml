@@ -26,9 +26,11 @@
 
     AZRegions:
       us-east-1:
-        AZs: ["a", "b"]
+        PublicAZs: [ "a" ]
+        PrivateAZs: [ "a", "b" ]
       us-west-1:
-        AZs: ["a", "b"]
+        PublicAZs: [ "a" ]
+        PrivateAZs: [ "a", "b" ]
 
   Resources:
     VPC:
@@ -40,8 +42,6 @@
         Tags:
           - Key: "Environment"
             Value: !Ref Environment
-          - Key: "Network"
-            Value: "Public"
           - Key: "Name"
             Value: "VPC Public and Private with NAT"
 
@@ -53,7 +53,7 @@
         AvailabilityZone:
           Fn::Sub:
             - "${AWS::Region}${AZ}"
-            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
+            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PublicAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Public0", !Ref Environment ]
         MapPublicIpOnLaunch: true
         Tags:
@@ -69,7 +69,7 @@
         AvailabilityZone:
           Fn::Sub:
             - "${AWS::Region}${AZ}"
-            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
+            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Private0", !Ref Environment ]
         Tags:
           - Key: "Environment"
@@ -84,7 +84,7 @@
         AvailabilityZone:
           Fn::Sub:
             - "${AWS::Region}${AZ}"
-            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "AZs" ] ]
+            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Private1", !Ref Environment ]
         Tags:
           - Key: "Environment"
