@@ -51,7 +51,7 @@
       Properties:
         VpcId: !Ref "VPC"
         AvailabilityZone:
-          Fn::Sub:
+          !Sub
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PublicAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Public0", !Ref Environment ]
@@ -67,7 +67,7 @@
       Properties:
         VpcId: !Ref "VPC"
         AvailabilityZone:
-          Fn::Sub:
+          !Sub
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Private0", !Ref Environment ]
@@ -82,7 +82,7 @@
       Properties:
         VpcId: !Ref "VPC"
         AvailabilityZone:
-          Fn::Sub:
+          !Sub
             - "${AWS::Region}${AZ}"
             - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Private1", !Ref Environment ]
