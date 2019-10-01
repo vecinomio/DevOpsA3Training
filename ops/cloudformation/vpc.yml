@@ -233,6 +233,13 @@
         Type: String
         Name: !Sub "${AWS::StackName}-VPCId"
 
+    VPCRegion:
+      Description: "Region, where VPC was deployed"
+      Value: !Sub "${AWS::Region}"
+      Export:
+        Type: String
+        Name: !Sub "${AWS::StackName}-Region"
+
     PublicSubnet0:
       Description: "SubnetId of public subnet 0"
       Value: !Ref "PublicSubnet0"
