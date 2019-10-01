@@ -4,14 +4,8 @@
   Description: "Creates a VPC with Managed NAT"
 
   Parameters:
-    StackName:
-      Type: String
-      Default: DevVPC
-      MinLength: 1
-
     Environment:
       Type: String
-      Default: Dev
       AllowedValues: [ Dev, Prod ]
       ConstraintDescription: Must be a valid environment name (Dev or Prod)
 
