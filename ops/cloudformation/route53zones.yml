@@ -5,12 +5,12 @@ Description: 'Public and private DNS zone'
 
 Parameters:
   PrivateDomainName:
-    Description: 'The name of the domain'
+    Description: 'The name of the domain via private interface'
     Type: String
     Default: example.com
 
   PublicDomainName:
-    Description: 'The name of the domain'
+    Description: 'The name of the domain via public interface'
     Type: String
     Default: devopsa3train.co.uk
 
