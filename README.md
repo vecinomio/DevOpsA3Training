@@ -23,14 +23,14 @@ image above.
 2. Check you default region in AWS (Those templates uses us-east-1 region)
 3. Create VPC infrastructure:
    - run command:
-     aws cloudformation deploy --stack-name <VPCStackName> \
+     aws cloudformation deploy --stack-name ***VPCStackName*** \
                                --template-file ops/cloudformation/vpc.yml \
-                               --parameter-overrides Environment=<Dev or Prod> \
-                               --region <Region> \
-                               --profile <Profile>
+                               --parameter-overrides Environment=***Dev or Prod*** \
+                               --region ***Region*** \
+                               --profile ***Profile***
 4. Create Bastion-host AutoScaling Group:
    - run command:
-     aws cloudformation deploy --stack-name <BastionStackName> \
+     aws cloudformation deploy --stack-name ***BastionStackName*** \
                                --template-file A3-ASG-bastion.yaml \
-                               --parameters-overrides VPCStackName=DevVPC \
+                               --parameters-overrides VPCStackName=***DevVPC or ProdVPC*** \
                                --capabilities CAPABILITY_NAMED_IAM
