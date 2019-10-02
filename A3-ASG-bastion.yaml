@@ -1,14 +1,12 @@
   AWSTemplateFormatVersion: "2010-09-09"
 
   Description: "Creates a Launch Configuration with Bastion host and
-  Auto Scaling Group for Bastion in Public subnet 0"
+  Auto Scaling Group for Bastion in Public subnet 0. Attaches EIP to Bastion"
 
   Parameters:
     VPCStackName:
       Type: String
-      AllowedValues:
-        - DevVPC
-        - ProdVPC
+      AllowedValues: [ DevVPC, ProdVPC ]
     KeyName:
       Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
       Type: 'AWS::EC2::KeyPair::KeyName'
@@ -23,10 +21,7 @@
       Type: String
       Description: Type of EC2 instance.
       Default: t2.micro
-      AllowedValues:
-        - t2.micro
-        - t2.small
-        - t2.medium
+      AllowedValues: [ t2.micro, t2.small, t2.medium ]
       ConstraintDescription: Must be a valid EC2 instance type.
 
   Mappings:
@@ -35,6 +30,7 @@
         AMI: ami-0080e4c5bc078760e # Amazon Linux 2
       us-west-1:
         AMI: ami-0080e4c5bc078760e # Amazon Linux 2
+
   Resources:
     BastionSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
@@ -48,18 +44,69 @@
             ToPort: '22'
             CidrIp: !Ref SSHLocation
 
+    IPAddress:
+      Type: 'AWS::EC2::EIP'
+
+    BastionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Description: Role for Bastion-host to ability associate and disassociate
+                     EIP for itself.
+        RoleName: "BastionRole"
+        Path: "/"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - ec2.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: "EIPforBastion"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Resource: "*"
+                  Action:
+                    - ec2:AssociateAddress
+                    - ec2:DisassociateAddress
+
+    BastionInstanceProfile:
+      Type: AWS::IAM::InstanceProfile
+      Properties:
+        Path: "/"
+        Roles:
+          - Ref: BastionRole
+
     LaunchConfig:
       Type: "AWS::AutoScaling::LaunchConfiguration"
       Properties:
+        UserData:
+          Fn::Base64: !Sub
+            - |
+              #!/bin/bash
+              echo ----------------------START SCRIPT-------------------------
+              INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+              ALLOCATION_ID=${allocation}
+              REGION=${DevRegion}
+              aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION
+            - allocation: !GetAtt IPAddress.AllocationId
+              DevRegion: !Ref "AWS::Region"
         AssociatePublicIpAddress: "true"
         ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
         InstanceType: !Ref InstanceType
         KeyName: !Ref KeyName
+        IamInstanceProfile: !Ref BastionInstanceProfile
         SecurityGroups:
           - !Ref BastionSecurityGroup
-        BlockDeviceMappings:
-          - DeviceName: /dev/sdc
-            VirtualName: ephemeral0
+        # BlockDeviceMappings:
+        #   - DeviceName: /dev/sdb
+        #     Ebs:
+        #       VolumeSize: "20"
+        #       DeleteOnTermination: "false"
 
     BastionAutoScalingGroup:
       Type: "AWS::AutoScaling::AutoScalingGroup"
@@ -72,5 +119,11 @@
         DesiredCapacity: "1"
         Tags:
           - Key: "Name"
-            Value: A3-ASG-bastion
+            Value: "A3-ASG-bastion"
             PropagateAtLaunch: true
+
+
+  Outputs:
+    BastionIPAddress:
+      Description: IP address of the Bastion-host instance
+      Value: !Ref IPAddress
