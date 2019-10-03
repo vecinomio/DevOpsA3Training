@@ -1,5 +1,5 @@
 # DevOpsA3Training
-![DevOps A3 Cloud Architecture V2](https://user-images.githubusercontent.com/37980289/65879722-1e568980-e399-11e9-8ecf-0f6bf96b818b.png)
+![DevOps A3 Cloud Architecture V2 (1)](https://user-images.githubusercontent.com/37980289/66130388-5577a580-e5fa-11e9-9743-c1cf88a35654.png)
 
 ## Description:
 This instructions provide how to create infrastructure in AWS according to the
