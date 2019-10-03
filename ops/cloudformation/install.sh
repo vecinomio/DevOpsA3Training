@@ -109,24 +109,6 @@ function get_jenkins_snapshot() {
 }
 
 #-------------------------------------------------------------------------------
-# Determine public IP for Jenkins
-#
-# @param $1 - The region where the host is located.
-#-------------------------------------------------------------------------------
-function get_jenkins_public_ip() {
-  local region="${1}"
-  local public_ip=$(wait_until ec2-metadata | awk '/public-ipv4/{print $2}')
-
-  if [[ -z ${public_ip} ]]; then
-    log "Public IP not found."
-    echo ""
-  else
-    log "Found IP ${public_ip}"
-    echo "${public_ip}"
-  fi
-}
-
-#-------------------------------------------------------------------------------
 # Determine the physical ID of the assigned EBS data volume to attach and mount
 #
 # This is determined from the EC2 tags on the current instance.
@@ -265,24 +247,7 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
-# Associates an Elastic IP address with jenkins host
-#-------------------------------------------------------------------------------
-function associate_eip() {
-  local region="${1}"
-  local public_ip=$(get_jenkins_public_ip ${region})
-  local instance_id=$(get_ec2_instance_id)
-  local allocation_id=""
-
-  allocation_id=$(wait_until aws ec2 associate-address        \
-                             --region ${region}               \
-                             --instance-id ${instance_id}     \
-                             --public-ip ${public_ip}         \
-                             --output text)
-  log "Allocation ID is ${allocation_id} for EIP ${public_ip}"
-}
-
-#-------------------------------------------------------------------------------
-# Install a Jenkins
+# Install Jenkins
 #-------------------------------------------------------------------------------
 function install_jenkins() {
   curl --silent --location http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo | sudo tee /etc/yum.repos.d/jenkins.repo
@@ -294,7 +259,7 @@ function install_jenkins() {
 }
 
 #-------------------------------------------------------------------------------
-# Install Jenkins and additional packages.
+# Set hostname, mount or create volume, install Jenkins and additional packages.
 #-------------------------------------------------------------------------------
 function main() {
   local region=$(get_ec2_instance_region)
@@ -310,10 +275,8 @@ function main() {
 
   wait_until yum update -y
 
-  # Set the hostname
   set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
-  associate_eip ${region}
   yum reinstall -y aws-cli
   install_jenkins
 }
