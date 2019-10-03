@@ -16,21 +16,28 @@ function log() {
 function error() {
   echo 1>&2 "ERROR: $@"
   echo 1>&2
-  usage
   exit 1
 }
 
 #-------------------------------------------------------------------------------
-# Retry a command until it returns an exit code of zero.
+# Retry 10 times a command until it returns an exit code of zero. 
+# Else - raise error.
 #
 # @param $* - The command to run.
 #-------------------------------------------------------------------------------
 function wait_until() {
-    until "${@}"; do
+  local counter=0
+    until [[ counter -gt 10 ]]; do
+        "${@}" && break
         log "Command failed: ${*}"
         sleep 10
-        log "Retrying."
+        log "Retrying..."
+        ((counter=counter+1))
     done
+    if [[ counter -gt 10 ]]; then
+      error "Command ${@} was unsuccessful."
+      exit 1
+    fi
 }
 
 #-------------------------------------------------------------------------------
@@ -67,9 +74,7 @@ function get_ec2_instance_tag() {
   local tag="${1}"
   local region=$(get_ec2_instance_region)
   local instance_id=$(get_ec2_instance_id)
-  local value=
-
-    value=$(wait_until aws ec2 describe-tags                            \
+  local value=$(wait_until aws ec2 describe-tags                            \
                     --region "${region}"                                \
                     --filters Name=resource-id,Values="${instance_id}"  \
                               Name=key,Values="${tag}"                  \
@@ -90,8 +95,8 @@ function get_jenkins_snapshot() {
   local snapshot_id=$(wait_until aws ec2 describe-snapshots                                                   \
                         --region ${region}                                                                    \
                         --filters Name=status,Values=completed                                                \
-                                  Name=tag:service,Values=jenkins                                             \
-                        --query 'Snapshots[].[SnapshotId, StartTime] | reverse(sort_by(@, &[1])) | [0] | [0]' \
+                                  Name=tag:Service,Values=Jenkins                                             \
+                        --query 'Snapshots[].[SnapshotId,StartTime] | reverse(sort_by(@, &[1])) | [0] | [0]' \
                         --output text)
 
   if [[ ${snapshot_id} = "None" || -z ${snapshot_id} ]]; then
@@ -110,10 +115,9 @@ function get_jenkins_snapshot() {
 #-------------------------------------------------------------------------------
 function get_jenkins_public_ip() {
   local region="${1}"
-
-  local public_ip=$(wait_until aws ec2  describe-addresses                 \
+  local public_ip=$(wait_until aws ec2 describe-addresses                 \
                                 --region ${region}                         \
-                                --filter Name=tag:service,Values=jenkins   \
+                                --filter Name=tag:Service,Values=Jenkins   \
                                 --query 'Addresses[].[PublicIp]'           \
                                 --output text)
 
@@ -134,12 +138,11 @@ function get_jenkins_public_ip() {
 #-------------------------------------------------------------------------------
 function get_jenkins_data_volume() {
   local region=${1}
-
   local volume_id=$(wait_until aws ec2 describe-volumes                        \
                          --region ${region}                                    \
                          --filters Name=status,Values=available                \
-                                   Name=tag:service,Values=jenkins-native      \
-                         --query 'Volumes[].[VolumeId, CreateTime] | reverse(sort_by(@, &[1])) | [0] | [0]'          \
+                                   Name=tag:Service,Values=Jenkins-native      \
+                         --query 'Volumes[].[VolumeId,CreateTime] | reverse(sort_by(@, &[1])) | [0] | [0]'          \
                          --output text)
 
   if [[ ${volume_id} = "None" || -z ${volume_id} ]]; then
@@ -152,29 +155,15 @@ function get_jenkins_data_volume() {
 }
 
 #-------------------------------------------------------------------------------
-# Install a package, retrying if it fails.
-#-------------------------------------------------------------------------------
-function yum_install() {
-  local package="${1}"
-
-  while ! yum install -y "${package}"; do
-    log "Failed to install ${package}"
-    sleep 15
-    log "Trying again."
-  done
-}
-
-#-------------------------------------------------------------------------------
 # Set hostname and perform any necessary related tasks.
 #
 # @param $1 - The desired hostname of the server.
 #-------------------------------------------------------------------------------
 function set_hostname() {
-  local hostname="${1}"
-  hostname "${hostname}"
-
-  local expr="s/^([[:space:]]*HOSTNAME=)[^[:space:]]*/\1${hostname}/"
-  sed -ri "${expr}" /etc/sysconfig/network
+  hostnamectl set-hostname "${1}"
+# AMI:
+#  local expr="s/^([[:space:]]*HOSTNAME=)[^[:space:]]*/\1${hostname}/"
+#  sed -ri "${expr}" /etc/sysconfig/network
 }
 
 #-------------------------------------------------------------------------------
@@ -256,7 +245,7 @@ function mount_jenkins_data_volume() {
     attach_volume ${created_volume} ${device} ${region}
 
     # Install the xfsprogs package since we need an XFS volume
-    yum_install xfsprogs
+    wait_until yum install xfsprogs -y
     log "Installed xfsprogs package."
 
     # Create a new file system
@@ -302,13 +291,13 @@ function associate_eip() {
 function install_jenkins() {
   curl --silent --location http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo | sudo tee /etc/yum.repos.d/jenkins.repo
   rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
-  yum_install jenkins
+  wai_until yum install jenkins -y
   sed -i 's/JENKINS_ENABLE_ACCESS_LOG="\w*"/JENKINS_ENABLE_ACCESS_LOG="yes"/' /etc/sysconfig/jenkins
-  service jenkins start
+  systemctl enable jenkins && systemctl start jenkins
 }
 
 #-------------------------------------------------------------------------------
-# Install Jenkins.
+# Install Jenkins and additional packages.
 #-------------------------------------------------------------------------------
 function main() {
   local region=$(get_ec2_instance_region)
@@ -328,8 +317,8 @@ function main() {
   set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
   associate_eip ${region}
-  yum_install git
-  pip install boto3
+#  wait_until yum install git -y
+#  pip install boto3
   yum reinstall -y aws-cli
   install_jenkins
 }

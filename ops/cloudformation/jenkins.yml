@@ -1,3 +1,6 @@
+# Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
+#
+# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   KeyPairName:
@@ -142,7 +145,7 @@ Resources:
           set -o nounset
           set -o xtrace
 
-          aws s3 cp "s3://${S3Path}/scripts/jenkins/install.sh" - | bash -l -s -- --hostname jenkins
+          aws s3 cp "s3://${S3Path}/scripts/jenkins/install.sh" / #- | bash -l -s -- --hostname jenkins
 #
 #          echo $(date): Finished installing Jenkins
 
@@ -150,8 +153,8 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       Tags:
-        - Key: 'service'
-          Value: 'jenkins'
+        - Key: 'Service'
+          Value: 'Jenkins'
           PropagateAtLaunch: true
 
       VPCZoneIdentifier:
@@ -179,8 +182,8 @@ Resources:
           Protocol: HTTPS
           SSLCertificateId: !Ref SSLCertificate
       Tags:
-        - Key: 'service'
-          Value: 'jenkins'
+        - Key: 'Service'
+          Value: 'Jenkins'
         - Key: 'resource'
           Value: 'ELB'
 

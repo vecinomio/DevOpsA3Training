@@ -1,3 +1,7 @@
+# Creates a EBS volume for Jenkins with retention policy for 5 daily snapshots.
+#
+# aws cloudformation deploy --template-file ebs-volume.yml --stack-name jenkins-ebs --capabilities CAPABILITY_IAM
+#
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   Size:
@@ -15,16 +19,28 @@ Parameters:
     Description: Normally - ci
     Default: ci
 
+Mappings:
+  AZRegions:
+    us-east-1:
+      PublicAZs: ["a"]
+      PrivateAZs: ["a", "b"]
+    us-west-1:
+      PublicAZs: ["a"]
+      PrivateAZs: ["a", "b"]
+
 Resources:
   EBSVolume:
     Type: AWS::EC2::Volume
     Properties:
-      AvailabilityZone: us-east-1a
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
       Encrypted: No
       Size: !Ref Size
       Tags:
-        - Key: "service"
-          Value: "jenkins"
+        - Key: "Service"
+          Value: "Jenkins"
         - Key: "Environment"
           Value: "ci"
       VolumeType: gp2
