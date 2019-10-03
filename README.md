@@ -1,5 +1,5 @@
 # DevOpsA3Training
-![DevOps A3 Cloud Architecture V2 (1)](https://user-images.githubusercontent.com/37980289/66130388-5577a580-e5fa-11e9-9743-c1cf88a35654.png)
+![DevOps A3 Cloud Architecture V2 (5)](https://user-images.githubusercontent.com/37980289/66132663-13506300-e5fe-11e9-8184-85cecea86746.png)
 
 ## Description:
 This instructions provide how to create infrastructure in AWS according to the
@@ -10,10 +10,11 @@ image above.
 * All resources in Public subnet has Internet access through Internet Gateway
 * All resources in Private subnets has Internet access through NAT Gateway
 * Public0 subnet contains:
-   - ElasticLoadBalancer
    - Nat Gateway
+   - ElasticLoadBalancer for Web-app AutoScalingGroup
+   - ElasticLoadBalancer for Jenkins AutoScalingGroup
    - Bastion-host AutoScalingGroup with Persistent Storage and Elastic IP
-   - Jenkins AutoScalingGroup with Persistent Storage and Elastic IP
+   - Jenkins AutoScalingGroup with Persistent Storage
 * Private0 subnet contains:
    - Web application AutoScalingGroup
 * Private1 subnet contains:
