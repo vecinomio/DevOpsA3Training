@@ -145,9 +145,8 @@ Resources:
           set -o nounset
           set -o xtrace
 
-          aws s3 cp "s3://${S3Path}/scripts/jenkins/install.sh" / #- | bash -l -s -- --hostname jenkins
-#
-#          echo $(date): Finished installing Jenkins
+          aws s3 cp "s3://${S3Path}/scripts/jenkins/install.sh" - | bash -l -s -- --hostname jenkins
+          echo $(date): Finished installing Jenkins
 
   MyServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup

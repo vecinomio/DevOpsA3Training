@@ -115,11 +115,7 @@ function get_jenkins_snapshot() {
 #-------------------------------------------------------------------------------
 function get_jenkins_public_ip() {
   local region="${1}"
-  local public_ip=$(wait_until aws ec2 describe-addresses                 \
-                                --region ${region}                         \
-                                --filter Name=tag:Service,Values=Jenkins   \
-                                --query 'Addresses[].[PublicIp]'           \
-                                --output text)
+  local public_ip=$(wait_until ec2-metadata | awk '/public-ipv4/{print $2}')
 
   if [[ -z ${public_ip} ]]; then
     log "Public IP not found."
@@ -291,7 +287,8 @@ function associate_eip() {
 function install_jenkins() {
   curl --silent --location http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo | sudo tee /etc/yum.repos.d/jenkins.repo
   rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
-  wai_until yum install jenkins -y
+  wait_until yum install java-1.8.0-openjdk-devel.x86_64 -y
+  wait_until yum install jenkins -y
   sed -i 's/JENKINS_ENABLE_ACCESS_LOG="\w*"/JENKINS_ENABLE_ACCESS_LOG="yes"/' /etc/sysconfig/jenkins
   systemctl enable jenkins && systemctl start jenkins
 }
@@ -317,8 +314,6 @@ function main() {
   set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
   associate_eip ${region}
-#  wait_until yum install git -y
-#  pip install boto3
   yum reinstall -y aws-cli
   install_jenkins
 }
