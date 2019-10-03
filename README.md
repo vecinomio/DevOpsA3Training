@@ -13,6 +13,7 @@ image above.
    - ElasticLoadBalancer
    - Nat Gateway
    - Bastion-host AutoScalingGroup with Persistent Storage and Elastic IP
+   - Jenkins AutoScalingGroup with Persistent Storage and Elastic IP
 * Private0 subnet contains:
    - Web application AutoScalingGroup
 * Private1 subnet contains:
