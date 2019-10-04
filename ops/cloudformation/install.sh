@@ -119,7 +119,7 @@ function get_jenkins_data_volume() {
   local volume_id=$(wait_until aws ec2 describe-volumes                        \
                          --region ${region}                                    \
                          --filters Name=status,Values=available                \
-                                   Name=tag:Service,Values=Jenkins-native      \
+                                   Name=tag:Service,Values=Jenkins             \
                          --query 'Volumes[].[VolumeId,CreateTime] | reverse(sort_by(@, &[1])) | [0] | [0]'          \
                          --output text)
 
