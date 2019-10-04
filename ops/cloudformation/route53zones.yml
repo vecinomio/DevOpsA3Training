@@ -12,7 +12,7 @@ Parameters:
   PublicDomainName:
     Description: 'The name of the domain via public interface'
     Type: String
-    Default: devopsa3train.co.uk
+    Default: devopsa3.me.uk
 
   VPCStackNameToAssociate:
     Type: String
