@@ -205,6 +205,11 @@
       Type: "AWS::EC2::RouteTable"
       Properties:
         VpcId: !Ref "VPC"
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "PrivateRT"
 
     PrivateRouteToInternet0:
       Type: "AWS::EC2::Route"
