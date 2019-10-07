@@ -38,5 +38,5 @@ image above.
    - run command to create Bastion stack:
      aws cloudformation deploy --stack-name ***The_Name_of_The_Bastion_Stack*** \
                                --template-file ops/cloudformation/bastion.yml \
-                               --parameters-overrides VPCStackName=***DevVPC or ProdVPC*** \
+                               --parameter-overrides VPCStackName=***DevVPC or ProdVPC*** \
                                --capabilities CAPABILITY_NAMED_IAM

@@ -7,9 +7,9 @@
                   Bastion Persistent Volume;
                   Bastion Role with Policies;
                   Bastion Profile;
-                  Bastion Launch Configuration;
-                  Bastion Auto Scaling Group.
-                Attaches EIP and EBS to Bastion"
+                  Bastion Launch Configuration:
+                    Attaches EIP and EBS to Bastion;
+                  Bastion Auto Scaling Group."
 
   Parameters:
     VPCStackName:
@@ -38,7 +38,7 @@
     HostedZone:
       Type: String
       Description: Project hosted zone.
-      Default: devopsa3.me.uk. # Project Domain Name
+      Default: devopsa3.me.uk.
 
   Mappings:
     RegionMap:
@@ -68,7 +68,7 @@
       Properties:
         HostedZoneName: !Ref 'HostedZone'
         Comment: DNS name for Bastion-host
-        Name: !Join ['', ['bastion', ., !Ref 'HostedZone']]
+        Name: !Join ['.', ['bastion', !Ref 'HostedZone']]
         Type: A
         TTL: '60'
         ResourceRecords: [ !Ref BastionEIP ]
@@ -134,17 +134,18 @@
               ALLOCATION_ID=${Allocation}
               VOLUME_ID=${Volume}
               REGION=${DevRegion}
-              VOL_DEVICE=/dev/xvdf
+              VOL_DEVICE=/dev/sdf
               MOUNT_DIR=/bastionData
               echo ---------------------ASSOCIATING EIP-----------------------
               aws ec2 associate-address --instance-id $INSTANCE_ID \
               --allocation-id $ALLOCATION_ID --region $REGION
               echo ---------------------ATTACHING VOLUME----------------------
               aws ec2 attach-volume --volume-id $VOLUME_ID \
-              --instance-id $INSTANCE_ID --device /dev/xvdf --region $REGION
+              --instance-id $INSTANCE_ID --device $VOL_DEVICE --region $REGION
+              sleep 30
               echo ---------------------MOUNTING VOLUME-----------------------
               yum install -y xfsprogs
-              mkfs -t xfs /dev/xvdf
+              mkfs.xfs $VOL_DEVICE
               mkdir $MOUNT_DIR
               mount $VOL_DEVICE $MOUNT_DIR
               echo "$VOL_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
@@ -159,6 +160,7 @@
         IamInstanceProfile: !Ref BastionInstanceProfile
         SecurityGroups:
           - !Ref BastionSecurityGroup
+      DependsOn: BastionVolume
 
     BastionAutoScalingGroup:
       Type: "AWS::AutoScaling::AutoScalingGroup"
