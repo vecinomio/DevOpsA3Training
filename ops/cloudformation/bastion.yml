@@ -136,16 +136,22 @@
               REGION=${DevRegion}
               VOL_DEVICE=/dev/sdf
               MOUNT_DIR=/bastionData
+              function retry_until_available() {
+                  until "$@"; do
+                      echo "Command failed: $*"
+                      sleep 10
+                      echo "Retrying."
+                  done
+              }
               echo ---------------------ASSOCIATING EIP-----------------------
-              aws ec2 associate-address --instance-id $INSTANCE_ID \
-              --allocation-id $ALLOCATION_ID --region $REGION
+              retry_until_available aws ec2 associate-address --instance-id \
+              $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION
               echo ---------------------ATTACHING VOLUME----------------------
-              aws ec2 attach-volume --volume-id $VOLUME_ID \
+              retry_until_available aws ec2 attach-volume --volume-id $VOLUME_ID \
               --instance-id $INSTANCE_ID --device $VOL_DEVICE --region $REGION
-              sleep 30
               echo ---------------------MOUNTING VOLUME-----------------------
-              yum install -y xfsprogs
-              mkfs.xfs $VOL_DEVICE
+              retry_until_available yum install -y xfsprogs
+              retry_until_available mkfs.xfs $VOL_DEVICE
               mkdir $MOUNT_DIR
               mount $VOL_DEVICE $MOUNT_DIR
               echo "$VOL_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
