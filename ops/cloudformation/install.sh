@@ -21,23 +21,17 @@ function error() {
 
 #-------------------------------------------------------------------------------
 # Retry 10 times a command until it returns an exit code of zero. 
-# Else - raise error.
 #
 # @param $* - The command to run.
 #-------------------------------------------------------------------------------
 function wait_until() {
-  local counter=0
-    until [[ counter -gt 10 ]]; do
+#  local counter=0
+    for counter in $(seq 1 10); do
+      [ counter -eq 10 ] || sleep 10
         "${@}" && break
         log "Command failed: ${*}"
-        sleep 10
         log "Retrying..."
-        ((counter=counter+1))
     done
-    if [[ counter -gt 10 ]]; then
-      error "Command ${@} was unsuccessful."
-      exit 1
-    fi
 }
 
 #-------------------------------------------------------------------------------
