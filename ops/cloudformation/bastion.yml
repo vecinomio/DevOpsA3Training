@@ -132,9 +132,9 @@
               INSTANCE_ID=$(curl -s \
                             http://169.254.169.254/latest/meta-data/instance-id)
               ALLOCATION_ID=${Allocation}
-              VOLUME_ID=${Volume}
               REGION=${DevRegion}
-              VOL_DEVICE=/dev/sdf
+              VOLUME_ID=${Volume}
+              VOLUME_DEVICE=/dev/xvdf
               MOUNT_DIR=/bastionData
               function retry_until_available() {
                   until "$@"; do
@@ -148,13 +148,35 @@
               $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION
               echo ---------------------ATTACHING VOLUME----------------------
               retry_until_available aws ec2 attach-volume --volume-id $VOLUME_ID \
-              --instance-id $INSTANCE_ID --device $VOL_DEVICE --region $REGION
+              --instance-id $INSTANCE_ID --device $VOLUME_DEVICE --region $REGION
               echo ---------------------MOUNTING VOLUME-----------------------
               retry_until_available yum install -y xfsprogs
-              retry_until_available mkfs.xfs $VOL_DEVICE
+              if [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: cannot \
+              open \`$VOLUME_DEVICE' (No such file or directory)" ]]; then
+                echo "No such device $VOLUME_DEVICE"
+                until [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: data" ]] || \
+                [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: SGI XFS \
+                filesystem data (blksz 4096, inosz 512, v2 dirs)" ]]; do
+                  sleep 3
+                  echo "Trying again."
+                done
+                echo "$VOLUME_DEVICE found"
+                if [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: data" ]]; then
+                  echo "No FS. Starts to creating FS"
+                  retry_until_available mkfs.xfs $VOLUME_DEVICE
+                elif [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: SGI XFS \
+                filesystem data (blksz 4096, inosz 512, v2 dirs)" ]]; then
+                  echo "FS is already exists"
+                fi
+              elif [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: data" ]]; then
+                echo "File System doesn't exists. Starting to create File System"
+                retry_until_available mkfs.xfs $VOLUME_DEVICE
+              elif [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: SGI XFS filesystem data (blksz 4096, inosz 512, v2 dirs)" ]]; then
+                echo "FS is already exists"
+              fi
               mkdir $MOUNT_DIR
-              mount $VOL_DEVICE $MOUNT_DIR
-              echo "$VOL_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
+              mount $VOLUME_DEVICE $MOUNT_DIR
+              echo "$VOLUME_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
               >> /etc/fstab
             - Allocation: !GetAtt BastionEIP.AllocationId
               Volume: !Ref BastionVolume
