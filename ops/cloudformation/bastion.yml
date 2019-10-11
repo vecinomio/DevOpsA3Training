@@ -135,43 +135,47 @@
               REGION=${DevRegion}
               VOLUME_ID=${Volume}
               VOLUME_DEVICE=/dev/xvdf
+              CHECK_VOLUME=$(file -s $VOLUME_DEVICE | awk '{print $2}')
               MOUNT_DIR=/bastionData
               function retry_until_available() {
-                  until "$@"; do
-                      echo "Command failed: $*"
-                      sleep 10
-                      echo "Retrying."
+                  local ATTEMPTS="$1"
+                  local SLEEP="$2"
+                  local FUNCTION="$3"
+                  for i in $(seq 1 $ATTEMPTS); do
+                      [ $i == 1 ] || sleep $SLEEP
+                      eval $FUNCTION && break
                   done
               }
               echo ---------------------ASSOCIATING EIP-----------------------
-              retry_until_available aws ec2 associate-address --instance-id \
-              $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION
+              retry_until_available 10 30 "aws ec2 associate-address --instance-id \
+              $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION"
               echo ---------------------ATTACHING VOLUME----------------------
-              retry_until_available aws ec2 attach-volume --volume-id $VOLUME_ID \
-              --instance-id $INSTANCE_ID --device $VOLUME_DEVICE --region $REGION
+              retry_until_available 10 30 "aws ec2 attach-volume --volume-id $VOLUME_ID \
+              --instance-id $INSTANCE_ID --device $VOLUME_DEVICE --region $REGION"
               echo ---------------------MOUNTING VOLUME-----------------------
-              retry_until_available yum install -y xfsprogs
-              if [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: cannot \
-              open \`$VOLUME_DEVICE' (No such file or directory)" ]]; then
+              retry_until_available 10 30 "yum install -y xfsprogs"
+              if [[ "$CHECK_VOLUME" = "cannot" ]]; then
                 echo "No such device $VOLUME_DEVICE"
-                until [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: data" ]] || \
-                [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: SGI XFS \
-                filesystem data (blksz 4096, inosz 512, v2 dirs)" ]]; do
-                  sleep 3
+                ATTEMPTS=0
+                until [[ "$CHECK_VOLUME" = "data" ]] || [[ "$CHECK_VOLUME" = "SGI" ]]; do
+                  sleep 10
+                  ((ATTEMPTS++))
                   echo "Trying again."
+                  if [ $ATTEMPTS -eq 5 ]; then
+                    echo "The number of attempts is over"
+                    break
+                  fi
                 done
-                echo "$VOLUME_DEVICE found"
-                if [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: data" ]]; then
-                  echo "No FS. Starts to creating FS"
-                  retry_until_available mkfs.xfs $VOLUME_DEVICE
-                elif [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: SGI XFS \
-                filesystem data (blksz 4096, inosz 512, v2 dirs)" ]]; then
+                if [[ "$CHECK_VOLUME" = "data" ]]; then
+                  echo "File System doesn't exists. Starting to create FS"
+                  retry_until_available 10 30 "mkfs.xfs $VOLUME_DEVICE"
+                elif [[ "$CHECK_VOLUME" = "SGI" ]]; then
                   echo "FS is already exists"
                 fi
-              elif [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: data" ]]; then
-                echo "File System doesn't exists. Starting to create File System"
-                retry_until_available mkfs.xfs $VOLUME_DEVICE
-              elif [[ $(file -s $VOLUME_DEVICE) = "$VOLUME_DEVICE: SGI XFS filesystem data (blksz 4096, inosz 512, v2 dirs)" ]]; then
+              elif [[ "$CHECK_VOLUME" = "data" ]]; then
+                echo "File System doesn't exists. Starting to create FS"
+                retry_until_available 10 30 "mkfs.xfs $VOLUME_DEVICE"
+              elif [[ "$CHECK_VOLUME" = "SGI" ]]; then
                 echo "FS is already exists"
               fi
               mkdir $MOUNT_DIR
