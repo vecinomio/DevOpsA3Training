@@ -36,9 +36,8 @@
       Description: Volume-size of persistent EBS for Bastion-host in Gb
       Default: 10
     HostedZone:
-      Type: String
+      Type: 'String'
       Description: Project hosted zone.
-      Default: devopsa3.me.uk.
 
   Mappings:
     RegionMap:
@@ -131,9 +130,9 @@
               echo -------------------------START-----------------------------
               INSTANCE_ID=$(curl -s \
                             http://169.254.169.254/latest/meta-data/instance-id)
-              ALLOCATION_ID=${Allocation}
-              REGION=${DevRegion}
-              VOLUME_ID=${Volume}
+              ALLOCATION_ID=${Allocation_id}
+              REGION=${Region}
+              VOLUME_ID=${Volume_id}
               VOLUME_DEVICE=/dev/xvdf
               CHECK_VOLUME=$(file -s $VOLUME_DEVICE | awk '{print $2}')
               MOUNT_DIR=/bastionData
@@ -143,48 +142,25 @@
                   local FUNCTION="$3"
                   for i in $(seq 1 $ATTEMPTS); do
                       [ $i == 1 ] || sleep $SLEEP
-                      eval $FUNCTION && break
+                      eval $FUNCTION && echo $? && break || echo $?
                   done
               }
               echo ---------------------ASSOCIATING EIP-----------------------
-              retry_until_available 10 30 "aws ec2 associate-address --instance-id \
+              retry_until_available 5 10 "aws ec2 associate-address --instance-id \
               $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION"
               echo ---------------------ATTACHING VOLUME----------------------
-              retry_until_available 10 30 "aws ec2 attach-volume --volume-id $VOLUME_ID \
+              retry_until_available 5 10 "aws ec2 attach-volume --volume-id $VOLUME_ID \
               --instance-id $INSTANCE_ID --device $VOLUME_DEVICE --region $REGION"
               echo ---------------------MOUNTING VOLUME-----------------------
-              retry_until_available 10 30 "yum install -y xfsprogs"
-              if [[ "$CHECK_VOLUME" = "cannot" ]]; then
-                echo "No such device $VOLUME_DEVICE"
-                ATTEMPTS=0
-                until [[ "$CHECK_VOLUME" = "data" ]] || [[ "$CHECK_VOLUME" = "SGI" ]]; do
-                  sleep 10
-                  ((ATTEMPTS++))
-                  echo "Trying again."
-                  if [ $ATTEMPTS -eq 5 ]; then
-                    echo "The number of attempts is over"
-                    break
-                  fi
-                done
-                if [[ "$CHECK_VOLUME" = "data" ]]; then
-                  echo "File System doesn't exists. Starting to create FS"
-                  retry_until_available 10 30 "mkfs.xfs $VOLUME_DEVICE"
-                elif [[ "$CHECK_VOLUME" = "SGI" ]]; then
-                  echo "FS is already exists"
-                fi
-              elif [[ "$CHECK_VOLUME" = "data" ]]; then
-                echo "File System doesn't exists. Starting to create FS"
-                retry_until_available 10 30 "mkfs.xfs $VOLUME_DEVICE"
-              elif [[ "$CHECK_VOLUME" = "SGI" ]]; then
-                echo "FS is already exists"
-              fi
+              retry_until_available 5 10 "yum install -y xfsprogs"
+              retry_until_available 5 10 "mkfs.xfs $VOLUME_DEVICE"
               mkdir $MOUNT_DIR
               mount $VOLUME_DEVICE $MOUNT_DIR
               echo "$VOLUME_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
               >> /etc/fstab
-            - Allocation: !GetAtt BastionEIP.AllocationId
-              Volume: !Ref BastionVolume
-              DevRegion: !Ref "AWS::Region"
+            - Allocation_id: !GetAtt BastionEIP.AllocationId
+              Volume_id: !Ref BastionVolume
+              Region: !Ref "AWS::Region"
         AssociatePublicIpAddress: "true"
         ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
         InstanceType: !Ref InstanceType
