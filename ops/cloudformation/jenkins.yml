@@ -42,6 +42,8 @@ Mappings:
   RegionMap:
     us-east-1:
       AMI: ami-0b69ea66ff7391e80
+    us-west-1:
+      AMI: ami-0245d318c6788de52
 
 Resources:
   InstanceRole:
