@@ -237,6 +237,11 @@
             - "ElasticIP0"
             - "AllocationId"
         SubnetId: !Ref "PublicSubnet0"
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "NAT0"
 
     NATGateway1:
       Type: "AWS::EC2::NatGateway"
@@ -246,6 +251,11 @@
             - "ElasticIP1"
             - "AllocationId"
         SubnetId: !Ref "PublicSubnet1"
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "NAT1"
 
     PrivateRouteTable0:
       Type: "AWS::EC2::RouteTable"
