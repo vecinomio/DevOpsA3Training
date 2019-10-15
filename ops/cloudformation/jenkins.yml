@@ -1,6 +1,6 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
 #
-# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides ScriptVersion=1.0.0 --capabilities CAPABILITY_IAM
+# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC ScriptVersion=1.0.0 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   KeyPairName:
@@ -29,7 +29,7 @@ Parameters:
 
   SSLCertificate:
     Type: String
-    Default: 'arn:aws:acm:us-east-1:054017840000:certificate/5c2ab5ef-ea79-419f-9596-9b570a4a7838'
+    Default: 'arn:aws:acm:us-east-1:054017840000:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e'
     Description: ARN of Certificate attached to ELB
 
   DNSName:
@@ -135,6 +135,7 @@ Resources:
             set -o pipefail
 
             yum install -y aws-cfn-bootstrap
+            PATH=$PATH:/opt/aws/bin/
             cfn-init -v --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
             cfn-signal -e $? --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
 
@@ -150,6 +151,8 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       Tags:
+        - Key: 'Name'
+          Value: 'Jenkins'
         - Key: 'Service'
           Value: 'Jenkins'
           PropagateAtLaunch: true
@@ -179,10 +182,10 @@ Resources:
           Protocol: HTTPS
           SSLCertificateId: !Ref SSLCertificate
       Tags:
+        - Key: 'Name'
+          Value: 'Jenkins'
         - Key: 'Service'
           Value: 'Jenkins'
-        - Key: 'resource'
-          Value: 'ELB'
 
   R53RecordSet:
     Type: AWS::Route53::RecordSet
