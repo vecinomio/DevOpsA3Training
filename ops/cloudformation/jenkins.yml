@@ -1,6 +1,6 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
 #
-# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC ScriptVersion=1.0.0 --capabilities CAPABILITY_IAM
+# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC ScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   KeyPairName:
@@ -134,11 +134,7 @@ Resources:
             set -o xtrace
             set -o pipefail
 
-            yum install -y aws-cfn-bootstrap
             PATH=$PATH:/opt/aws/bin/
-            cfn-init -v --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
-            cfn-signal -e $? --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
-
             aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
             cfn-signal -e $? --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
           - ver: !Ref ScriptVersion
@@ -150,13 +146,6 @@ Resources:
   MyServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      Tags:
-        - Key: 'Name'
-          Value: 'Jenkins'
-        - Key: 'Service'
-          Value: 'Jenkins'
-          PropagateAtLaunch: true
-
       VPCZoneIdentifier:
         - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
       LaunchConfigurationName: !Ref SimpleConfig
@@ -164,6 +153,13 @@ Resources:
       MaxSize: '1'
       LoadBalancerNames:
         - Ref: JenkinsLoadBalancer
+      Tags:
+        - Key: 'Name'
+          Value: 'Jenkins'
+          PropagateAtLaunch: true
+        - Key: 'Service'
+          Value: 'Jenkins'
+          PropagateAtLaunch: true
 
   JenkinsLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer

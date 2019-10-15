@@ -27,7 +27,7 @@ function error() {
 function wait_until() {
 #  local counter=0
     for counter in $(seq 1 10); do
-      [ counter -eq 10 ] || sleep 10
+      [ $counter -eq 10 ] || sleep 10
         "${@}" && break
         log "Command failed: ${*}"
         log "Retrying..."
@@ -266,7 +266,7 @@ function main() {
 
   set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
-  yum reinstall -y aws-cli
+  yum reinstall -y aws-cli aws-cfn-bootstrap
   install_jenkins
 }
 

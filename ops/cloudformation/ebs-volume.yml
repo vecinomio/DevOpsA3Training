@@ -39,6 +39,8 @@ Resources:
       Encrypted: No
       Size: !Ref Size
       Tags:
+        - Key: "Name"
+          Value: "Jenkins-ebs"
         - Key: "Service"
           Value: "Jenkins"
         - Key: "Environment"
