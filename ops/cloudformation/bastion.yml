@@ -67,7 +67,7 @@
       Properties:
         HostedZoneName: !Ref 'HostedZone'
         Comment: DNS name for Bastion-host
-        Name: !Join ['.', ['bastion', !Ref 'HostedZone']]
+        Name: !Sub 'bastion.${HostedZone}'
         Type: A
         TTL: '60'
         ResourceRecords: [ !Ref BastionEIP ]
@@ -129,14 +129,13 @@
               #!/bin/bash -x
               echo -------------------------START-----------------------------
               INSTANCE_ID=$(curl -s \
-                            http://169.254.169.254/latest/meta-data/instance-id)
+              http://169.254.169.254/latest/meta-data/instance-id)
               ALLOCATION_ID=${Allocation_id}
               REGION=${Region}
               VOLUME_ID=${Volume_id}
               VOLUME_DEVICE=/dev/xvdf
-              CHECK_VOLUME=$(file -s $VOLUME_DEVICE | awk '{print $2}')
               MOUNT_DIR=/bastionData
-              function retry_until_available() {
+              function retry_command() {
                   local ATTEMPTS="$1"
                   local SLEEP="$2"
                   local FUNCTION="$3"
@@ -146,14 +145,15 @@
                   done
               }
               echo ---------------------ASSOCIATING EIP-----------------------
-              retry_until_available 5 10 "aws ec2 associate-address --instance-id \
+              retry_command 5 10 "aws ec2 associate-address --instance-id \
               $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION"
               echo ---------------------ATTACHING VOLUME----------------------
-              retry_until_available 5 10 "aws ec2 attach-volume --volume-id $VOLUME_ID \
-              --instance-id $INSTANCE_ID --device $VOLUME_DEVICE --region $REGION"
+              retry_command 5 10 "aws ec2 attach-volume --volume-id $VOLUME_ID \
+              --instance-id $INSTANCE_ID --device $VOLUME_DEVICE \
+              --region $REGION"
               echo ---------------------MOUNTING VOLUME-----------------------
-              retry_until_available 5 10 "yum install -y xfsprogs"
-              retry_until_available 5 10 "mkfs.xfs $VOLUME_DEVICE"
+              retry_command 5 10 "yum install -y xfsprogs"
+              retry_command 5 10 "mkfs.xfs $VOLUME_DEVICE"
               mkdir $MOUNT_DIR
               mount $VOLUME_DEVICE $MOUNT_DIR
               echo "$VOLUME_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
@@ -183,12 +183,3 @@
           - Key: "Name"
             Value: "bastion-ASG"
             PropagateAtLaunch: true
-
-
-  Outputs:
-    BastionIPAddress:
-      Description: EIP address of the Bastion-host instance
-      Value: !Ref BastionEIP
-    BastionVolume:
-      Description: ID of the Persistent Volume for Bastion-host instance
-      Value: !Ref BastionVolume
