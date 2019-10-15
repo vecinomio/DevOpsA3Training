@@ -16,6 +16,11 @@ Parameters:
     Type: String
     Default: 0.0.0.0/0
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  HTTPLocation:
+    Description: The IP address range that can be used for HTTP/HTTPS requests
+    Type: String
+    Default: 0.0.0.0/0
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
   InstanceType:
     Type: String
     Description: Type of EC2 instance.
@@ -30,9 +35,9 @@ Parameters:
 Mappings:
   RegionMap:
     us-east-1:
-      AMI: ami-0080e4c5bc078760e # Amazon Linux 2
+      AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
     us-west-1:
-      AMI: ami-0080e4c5bc078760e # Amazon Linux 2
+      AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
 
 Resources:
   PrivateSubNetSecurityGroup:
@@ -49,11 +54,12 @@ Resources:
         - IpProtocol: tcp
           FromPort: '80'
           ToPort: '80'
-          CidrIp: !Ref SSHLocation
+          CidrIp: !Ref HTTPLocation
         - IpProtocol: tcp
           FromPort: '443'
           ToPort: '443'
-          CidrIp: !Ref SSHLocation
+          CidrIp: !Ref HTTPLocation
+
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
     Properties:
@@ -74,12 +80,13 @@ Resources:
             chmod 2775 /var/www
             echo -------------------------END-----------------------------
             "
-      AssociatePublicIpAddress: "true"
+      AssociatePublicIpAddress: "false"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
         - !Ref PrivateSubNetSecurityGroup
+
   webASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
