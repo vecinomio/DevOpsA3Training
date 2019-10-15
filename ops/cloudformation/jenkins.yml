@@ -144,7 +144,7 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: 2
-        Timeout: "PT15M"
+        Timeout: "PT10M"
 
   MyServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
