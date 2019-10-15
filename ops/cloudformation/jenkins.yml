@@ -1,6 +1,6 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
 #
-# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --capabilities CAPABILITY_IAM
+# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides ScriptVersion=1.0.0 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   KeyPairName:
@@ -22,6 +22,10 @@ Parameters:
     Type: String
     Description: The S3 path
     Default: devopsa3
+
+  ScriptVersion:
+    Type: String
+    Description: Bootstrap script version
 
   SSLCertificate:
     Type: String
@@ -103,25 +107,6 @@ Resources:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:DescribeAccountAttributes
                   - ec2:DeleteSecurityGroup
-                  - secretsmanager:GetSecretValue
-                  - cloudwatch:PutMetricAlarm
-                  - cloudwatch:DeleteAlarm
-                  - rds:CreateDBSubnetGroup
-                  - rds:DescribeDBSubnetGroups
-                  - rds:DescribeAccountAttributes
-                  - rds:DescribeCertificates
-                  - rds:DescribeDBClusterSnapshots
-                  - rds:DescribeDBInstances
-                  - rds:CreateDBInstance
-                  - rds:DescribeEngineDefaultClusterParameters
-                  - rds:DescribeEngineDefaultParameters
-                  - rds:DescribeEventCategories
-                  - rds:DescribeEvents
-                  - rds:DescribeOptionGroupOptions
-                  - rds:DescribeOrderableDBInstanceOptions
-                  - rds:DownloadCompleteDBLogFile
-                  - rds:PurchaseReservedDBInstancesOffering
-
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -141,14 +126,25 @@ Resources:
       InstanceType: !Ref InstanceType
       AssociatePublicIpAddress: True
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          set -o errexit
-          set -o nounset
-          set -o xtrace
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            set -o errexit
+            set -o nounset
+            set -o xtrace
+            set -o pipefail
 
-          aws s3 cp "s3://${S3Path}/scripts/jenkins/install.sh" - | bash -l -s -- --hostname jenkins
-          echo $(date): Finished installing Jenkins
+            yum install -y aws-cfn-bootstrap
+            cfn-init -v --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
+            cfn-signal -e $? --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
+
+            aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
+            cfn-signal -e $? --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
+          - ver: !Ref ScriptVersion
+    CreationPolicy:
+      ResourceSignal:
+        Count: 2
+        Timeout: "PT15M"
 
   MyServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup

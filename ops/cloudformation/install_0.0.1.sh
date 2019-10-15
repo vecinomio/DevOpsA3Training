@@ -127,15 +127,11 @@ function get_jenkins_data_volume() {
 }
 
 #-------------------------------------------------------------------------------
-# Set hostname and perform any necessary related tasks.
-#
+# Set hostname.
 # @param $1 - The desired hostname of the server.
 #-------------------------------------------------------------------------------
 function set_hostname() {
   hostnamectl set-hostname "${1}"
-# AMI:
-#  local expr="s/^([[:space:]]*HOSTNAME=)[^[:space:]]*/\1${hostname}/"
-#  sed -ri "${expr}" /etc/sysconfig/network
 }
 
 #-------------------------------------------------------------------------------
@@ -181,13 +177,12 @@ function mount_jenkins_data_volume() {
 
   #Valid volume found
   if [[ -n "${volume_id}" ]]; then
-    #Attach founded valid volume
     log "Attaching valid volume ${volume_id}"
     attach_volume ${volume_id} ${device} ${region}
 
-  #Snapshot exist and volume not found
+  #Volume not found but snapshot exists
   elif [[ -n ${snapshot_id} && -z ${volume_id} ]]; then
-    #Restore volume from last created snapshot
+    #Restore volume from the latest created snapshot
     log "Restoring volume from snapshot ${snapshot_id}"
     created_volume=$(wait_until aws ec2 create-volume                                           \
                    --region ${region}                                                           \
@@ -198,7 +193,7 @@ function mount_jenkins_data_volume() {
                    --output text)
     log "Volume ${created_volume} from snapshot ${snapshot_id} restored"
 
-    #Attach restored from snapshot volume
+    #Attach volume restored from snapshot
     attach_volume ${created_volume} ${device} ${region}
 
   #Snapshot not found, volume not found, create new volume
@@ -213,7 +208,7 @@ function mount_jenkins_data_volume() {
                    --output text)
     log "New volume ${created_volume} created"
 
-    #Attach new created volume
+    #Attach new volume
     attach_volume ${created_volume} ${device} ${region}
 
     # Install the xfsprogs package since we need an XFS volume
@@ -224,7 +219,7 @@ function mount_jenkins_data_volume() {
     mkfs.xfs -f ${device}
   fi
 
-  # Create the mount point
+  # Create a mount point
   mkdir -p ${mount_point}
   log "Created mount point."
 
