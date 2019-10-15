@@ -42,9 +42,9 @@
   Mappings:
     RegionMap:
       us-east-1:
-        AMI: ami-0080e4c5bc078760e # Amazon Linux 2
+        AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
       us-west-1:
-        AMI: ami-0080e4c5bc078760e # Amazon Linux 2
+        AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
 
   Resources:
     BastionSecurityGroup:
@@ -148,6 +148,7 @@
               retry_command 5 10 "aws ec2 associate-address --instance-id \
               $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION"
               echo ---------------------ATTACHING VOLUME----------------------
+              aws ec2 describe-volumes --region us-east-1
               retry_command 5 10 "aws ec2 attach-volume --volume-id $VOLUME_ID \
               --instance-id $INSTANCE_ID --device $VOLUME_DEVICE \
               --region $REGION"

@@ -1,5 +1,5 @@
 # DevOpsA3Training
-![DevOps A3 Cloud Architecture V2 (5)](https://user-images.githubusercontent.com/37980289/66132663-13506300-e5fe-11e9-8184-85cecea86746.png)
+![DevOps A3 Cloud Architecture V3](https://user-images.githubusercontent.com/37980289/66839106-91055e80-ef6e-11e9-9b8a-6984fabf60fa.png)
 
 ## Description:
 This instruction provides how to create Bastion-host within custom VPC in AWS, according to the image above.
