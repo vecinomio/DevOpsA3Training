@@ -93,6 +93,8 @@ Resources:
       MinSize: "1"
       MaxSize: "3"
       DesiredCapacity: "2"
+      LoadBalancerNames:
+        - Ref: WebLoadBalancer
       HealthCheckGracePeriod: 300
       LaunchConfigurationName: !Ref LaunchConfig
       VPCZoneIdentifier:
@@ -101,3 +103,25 @@ Resources:
         - Key: "Name"
           Value: "aveli-ASG"
           PropagateAtLaunch: true
+
+  WebLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      Subnets:
+        - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
+      SecurityGroups:
+        - Ref: PrivateSubNetSecurityGroup
+      Listeners:
+        - InstancePort: '80'
+          LoadBalancerPort: '80'
+          Protocol: HTTP
+#        - InstancePort: '8080'
+#          InstanceProtocol: HTTP
+#          LoadBalancerPort: '443'
+#          Protocol: HTTPS
+#          SSLCertificateId: !Ref SSLCertificate
+      Tags:
+        - Key: 'Name'
+          Value: 'web-LB'
+        - Key: 'env'
+          Value: 'dev'
