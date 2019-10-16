@@ -1,15 +1,7 @@
   AWSTemplateFormatVersion: "2010-09-09"
 
-  Description: "Creates resources in Public Subnet 0:
-                  Bastion Security Group;
-                  Bastion Elastic IP;
-                  Bastion DNS Record;
-                  Bastion Persistent Volume;
-                  Bastion Role with Policies;
-                  Bastion Profile;
-                  Bastion Launch Configuration:
-                    Attaches EIP and EBS to Bastion;
-                  Bastion Auto Scaling Group."
+  Description: "Creates AutoScalingGroup with only one Bastion-host.
+                Attaches EIP and Persistent Storage to it."
 
   Parameters:
     VPCStackName:
@@ -36,8 +28,12 @@
       Description: Volume-size of persistent EBS for Bastion-host in Gb
       Default: 10
     HostedZone:
-      Type: 'String'
+      Type: String
       Description: Project hosted zone.
+    DesiredCapacity:
+      Type: Number
+      Description: Desired number of instances in ASG.
+      Default: 1
 
   Mappings:
     RegionMap:
@@ -128,14 +124,14 @@
             - |
               #!/bin/bash -x
               echo -------------------------START-----------------------------
-              INSTANCE_ID=$(curl -s \
+              instanceID=$(curl -s \
               http://169.254.169.254/latest/meta-data/instance-id)
-              ALLOCATION_ID=${Allocation_id}
-              REGION=${Region}
-              VOLUME_ID=${Volume_id}
-              VOLUME_DEVICE=/dev/xvdf
-              MOUNT_DIR=/bastionData
-              function retry_command() {
+              allocationID=${AllocationId}
+              region=${Region}
+              volumeID=${VolumeId}
+              volumeDevice=/dev/xvdf
+              mountDir=/bastionData
+              function retryCommand() {
                   local ATTEMPTS="$1"
                   local SLEEP="$2"
                   local FUNCTION="$3"
@@ -145,22 +141,22 @@
                   done
               }
               echo ---------------------ASSOCIATING EIP-----------------------
-              retry_command 5 10 "aws ec2 associate-address --instance-id \
-              $INSTANCE_ID --allocation-id $ALLOCATION_ID --region $REGION"
+              retryCommand 5 10 "aws ec2 associate-address --instance-id \
+              $instanceID --allocation-id $allocationID --region $region"
               echo ---------------------ATTACHING VOLUME----------------------
               aws ec2 describe-volumes --region us-east-1
-              retry_command 5 10 "aws ec2 attach-volume --volume-id $VOLUME_ID \
-              --instance-id $INSTANCE_ID --device $VOLUME_DEVICE \
-              --region $REGION"
+              retryCommand 5 10 "aws ec2 attach-volume --volume-id $volumeID \
+              --instance-id $instanceID --device $volumeDevice \
+              --region $region"
               echo ---------------------MOUNTING VOLUME-----------------------
-              retry_command 5 10 "yum install -y xfsprogs"
-              retry_command 5 10 "mkfs.xfs $VOLUME_DEVICE"
-              mkdir $MOUNT_DIR
-              mount $VOLUME_DEVICE $MOUNT_DIR
-              echo "$VOLUME_DEVICE  $MOUNT_DIR  xfs  defaults,nofail  0  2" \
+              retryCommand 5 10 "yum install -y xfsprogs"
+              retryCommand 5 10 "mkfs.xfs $volumeDevice"
+              mkdir $mountDir
+              mount $volumeDevice $mountDir
+              echo "$volumeDevice  $mountDir  xfs  defaults,nofail  0  2" \
               >> /etc/fstab
-            - Allocation_id: !GetAtt BastionEIP.AllocationId
-              Volume_id: !Ref BastionVolume
+            - AllocationId: !GetAtt BastionEIP.AllocationId
+              VolumeId: !Ref BastionVolume
               Region: !Ref "AWS::Region"
         AssociatePublicIpAddress: "true"
         ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
@@ -177,9 +173,9 @@
         VPCZoneIdentifier:
           - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
         LaunchConfigurationName: !Ref LaunchConfig
-        MinSize: "1"
-        MaxSize: "1"
-        DesiredCapacity: "1"
+        MinSize: 1
+        MaxSize: 2
+        DesiredCapacity: !Ref DesiredCapacity
         Tags:
           - Key: "Name"
             Value: "bastion-ASG"

@@ -3,21 +3,40 @@
 
 ## Description:
 This instruction provides how to create Bastion-host within custom VPC in AWS, according to the image above.
+Resources will create in Public Subnet 0 of custom VPC:
+    Bastion Security Group;
+    Bastion Elastic IP;
+    Bastion DNS Record;
+    Bastion Persistent Volume;
+    Bastion Role with Policies;
+    Bastion Profile;
+    Bastion Launch Configuration:
+      Attaches EIP and EBS to Bastion;
+    Bastion Auto Scaling Group."
 
 ## Expected results:
-* Bastion-host in AutoScalingGroup 1-1 with Persistent Storage and SubDomain name.
-  - Bastion has SubDomain name: bastion.<---YourDomainName--->
+  - AutoScalingGroup with only one Bastion-host instance;
+  - Bastion has Persistent Storage: /dev/xvdf mounted to /bastionData;
+  - Bastion has DNS Record: bastion.<HostedZone>;
   - If Bastion-host falls, ASG will create new one and Persistent Storage will attach to it.
 
-# TODO:
-1. Clone repository from github
-2. Check you default region in AWS (Those templates uses us-east-1 region)
-3. Check VPC Stack. It must be up.
-4. Create Bastion-host AutoScaling Group:
-   - run command to validate template:
-     aws cloudformation validate-template --template-body file://ops/cloudformation/bastion.yml
-   - run command to create Bastion stack:
-     aws cloudformation deploy --stack-name ***The_Name_of_The_Bastion_Stack*** \
+# To create Bastion stack:
+
+   BastionStackName="bastion"
+   VPCStackName="DevVPC" or "ProdVPC"
+   HostedZone="<HostedZone>"
+   Region="us-east-1"
+
+1. Clone repository from github:
+   - git clone https://github.com/IYermakov/DevOpsA3Training.git
+2. Check VPC Stack. It must be up:
+   - aws cloudformation describe-stacks --stack-name ${VPCStackName}
+3. Validate bastion template:
+   - aws cloudformation validate-template --template-body \
+     file://ops/cloudformation/bastion.yml
+4. Create Bastion stack:
+   - aws cloudformation deploy --stack-name ${BastionStackName} \
                                --template-file ops/cloudformation/bastion.yml \
-                               --parameter-overrides VPCStackName=***DevVPC or ProdVPC*** HostedZone=<---YourDomainName--->. \
+                               --parameter-overrides VPCStackName ${VPCStackName} \ HostedZone ${HostedZone} \
                                --capabilities CAPABILITY_NAMED_IAM
+                               --region ${Region}
