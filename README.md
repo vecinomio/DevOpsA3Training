@@ -36,7 +36,7 @@ Resources will create in Public Subnet 0 of custom VPC:
 4. Create Bastion stack:
    - aws cloudformation deploy --stack-name ${BastionStackName} \
                                --template-file ops/cloudformation/bastion.yml \
-                               --parameter-overrides VPCStackName \ 
+                               --parameter-overrides VPCStackName \
                                ${VPCStackName} HostedZone ${HostedZone} \
                                --capabilities CAPABILITY_NAMED_IAM \
                                --region ${Region}
