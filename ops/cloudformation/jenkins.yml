@@ -141,10 +141,10 @@ Resources:
             PATH=$PATH:/opt/aws/bin/
 
             aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
-            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
-
+            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --id 1 --region ${AWS::Region}
+            sleep 1m
             curl -sS http://localhost:8080
-            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
+            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --id 2 --region ${AWS::Region}
           - ver: !Ref ScriptVersion
 
   MyServerGroup:
@@ -167,7 +167,7 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: 2
-        Timeout: "PT10M"
+        Timeout: "PT20M"
 
   JenkinsLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
