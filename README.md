@@ -4,15 +4,14 @@
 ## Description:
 This instruction provides how to create Bastion-host within custom VPC in AWS, according to the image above.
 Resources will create in Public Subnet 0 of custom VPC:
-    Bastion Security Group;
-    Bastion Elastic IP;
-    Bastion DNS Record;
-    Bastion Persistent Volume;
-    Bastion Role with Policies;
-    Bastion Profile;
-    Bastion Launch Configuration:
-      Attaches EIP and EBS to Bastion;
-    Bastion Auto Scaling Group."
+  - Bastion Security Group;
+  - Bastion Elastic IP;
+  - Bastion DNS Record;
+  - Bastion Persistent Volume;
+  - Bastion Role with Policies;
+  - Bastion Profile;
+  - Bastion Launch Configuration: Attaches EIP and EBS to Bastion;
+  - Bastion Auto Scaling Group."
 
 ## Expected results:
   - AutoScalingGroup with only one Bastion-host instance;
@@ -37,6 +36,7 @@ Resources will create in Public Subnet 0 of custom VPC:
 4. Create Bastion stack:
    - aws cloudformation deploy --stack-name ${BastionStackName} \
                                --template-file ops/cloudformation/bastion.yml \
-                               --parameter-overrides VPCStackName ${VPCStackName} \ HostedZone ${HostedZone} \
-                               --capabilities CAPABILITY_NAMED_IAM
+                               --parameter-overrides VPCStackName \ 
+                               ${VPCStackName} HostedZone ${HostedZone} \
+                               --capabilities CAPABILITY_NAMED_IAM \
                                --region ${Region}
