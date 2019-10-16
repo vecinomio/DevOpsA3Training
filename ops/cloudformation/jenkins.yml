@@ -37,6 +37,11 @@ Parameters:
     Description: DNS subdomain name for Jenkins
     Default: ci
 
+  DNSSuffix:
+    Type: String
+    Description: DNS subdomain suffix for testing purposes
+    Default: ''
+
   R53HostedZone:
     Type: String
     Default: 'devopsa3.me.uk.'
@@ -133,15 +138,14 @@ Resources:
             set -o nounset
             set -o xtrace
             set -o pipefail
-
             PATH=$PATH:/opt/aws/bin/
+
             aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
-            cfn-signal -e $? --stack ${AWS::StackName} --resource SimpleConfig --region ${AWS::Region}
+            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
+
+            curl -sS http://localhost:8080
+            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
           - ver: !Ref ScriptVersion
-    CreationPolicy:
-      ResourceSignal:
-        Count: 2
-        Timeout: "PT10M"
 
   MyServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -160,6 +164,10 @@ Resources:
         - Key: 'Service'
           Value: 'Jenkins'
           PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Count: 2
+        Timeout: "PT10M"
 
   JenkinsLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
@@ -187,7 +195,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneName: !Ref R53HostedZone
-      Name: !Join ['', [ !Ref DNSName, ., !Ref R53HostedZone]]
+      Name: !Join ['', [ !Ref DNSName, !Ref DNSSuffix, ., !Ref R53HostedZone]]
       Type: CNAME
       TTL: '300'
       ResourceRecords: [ !GetAtt JenkinsLoadBalancer.DNSName ]
