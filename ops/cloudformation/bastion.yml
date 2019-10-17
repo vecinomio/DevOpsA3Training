@@ -27,7 +27,7 @@
       Type: Number
       Description: Volume-size of persistent EBS for Bastion-host in Gb
       Default: 10
-    HostedZone:
+    HostedZoneName:
       Type: String
       Description: Project hosted zone.
     DesiredCapacity:
@@ -58,12 +58,12 @@
     BastionEIP:
       Type: 'AWS::EC2::EIP'
 
-    BastionDNSRecord:
+    BastionRecordSet:
       Type: AWS::Route53::RecordSet
       Properties:
-        HostedZoneName: !Ref 'HostedZone'
+        HostedZoneName: !Sub '${HostedZoneName}.'
         Comment: DNS name for Bastion-host
-        Name: !Sub 'bastion.${HostedZone}'
+        Name: !Sub 'bastion.${HostedZoneName}.'
         Type: A
         TTL: '60'
         ResourceRecords: [ !Ref BastionEIP ]
