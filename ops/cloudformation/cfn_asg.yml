@@ -61,7 +61,7 @@ Resources:
           CidrIp: !Ref SSHLocation
         - IpProtocol: tcp
           FromPort: '80'
-          ToPort: '80'
+          ToPort: '81'
           CidrIp: !Ref HTTPLocation
         - IpProtocol: tcp
           FromPort: '443'
@@ -81,6 +81,14 @@ Resources:
             echo "<html><body bgcolor=black><center><font color=gold> \
             <h1>Server IP is: $PrivateIP</h1></center> \
             </body></html>" > /var/www/html/index.html
+            echo "
+            Listen 81
+            <VirtualHost *:81>
+            RewriteEngine On
+            RewriteCond %{HTTP:X-Forwarded-Proto} =http
+            RewriteRule .* https://%{HTTP:Host}%{REQUEST_URI} [L,R=permanent]
+            </VirtualHost>
+            " > /etc/httpd/conf.d/redirect81to443.conf
             systemctl start httpd
             systemctl enable httpd
             usermod -a -G apache ec2-user
@@ -120,7 +128,7 @@ Resources:
       SecurityGroups:
         - Ref: PrivateSubNetSecurityGroup
       Listeners:
-        - InstancePort: '80'
+        - InstancePort: '81'
           LoadBalancerPort: '80'
           Protocol: HTTP
         - InstancePort: '80'
@@ -128,6 +136,13 @@ Resources:
           LoadBalancerPort: '443'
           Protocol: HTTPS
           SSLCertificateId: !Ref SSLCertificate
+      HealthCheck:
+          HealthyThreshold: 10
+          Interval: 30
+          Target: "HTTP:80/"
+          Timeout: 5
+          UnhealthyThreshold: 2
+
       Tags:
         - Key: 'Name'
           Value: 'web-LB'
