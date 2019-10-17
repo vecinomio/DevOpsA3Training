@@ -31,6 +31,10 @@ Parameters:
     Type: Number
     Description: Volume-size of persistent EBS for Bastion-host in Gb
     Default: 10
+  HostedZone:
+    Type: String
+    Description: Project hosted zone.
+    Default: "devopsa3.me.uk."
 
 Mappings:
   RegionMap:
@@ -125,3 +129,16 @@ Resources:
           Value: 'web-LB'
         - Key: 'env'
           Value: 'dev'
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+
+  WebDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Ref 'HostedZone'
+      Name: !Sub 'web-app.${HostedZone}'
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords: [ !GetAtt WebLoadBalancer.DNSName ]
+    DependsOn: ElasticIP
