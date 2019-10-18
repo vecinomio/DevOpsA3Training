@@ -1,3 +1,15 @@
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name web-asg-layer                     \
+#                           --template-file ops/cloudformation/cfn_asg.yml \
+#                           --parameter-overrides                          \
+#                             VPCStackName=DevVPC | ProdVPC                \
+#                             HostedZoneName=<HostedZoneName>              \
+#                           --tags                                      \
+#                             t1=v1                                     \
+#                             t2=v2                                     \
+#                           --region <region>                           \
+#                           --profile <profile>
+---
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: "ASG for private subnet."
@@ -25,16 +37,16 @@ Parameters:
     Type: String
     Description: Type of EC2 instance.
     Default: t2.micro
-    AllowedValues: [ t2.micro, t2.small, t2.medium ]
+#    AllowedValues: [ t2.micro, t2.small, t2.medium ]
     ConstraintDescription: Must be a valid EC2 instance type.
   VolumeSize:
     Type: Number
     Description: Volume-size of persistent EBS for Bastion-host in Gb
     Default: 10
-  HostedZone:
+  HostedZoneName:
     Type: String
     Description: Project hosted zone.
-    Default: "devopsa3.me.uk."
+#    Default: "devopsa3.me.uk."
   SSLCertificate:
     Type: String
     Default: 'arn:aws:acm:us-east-1:054017840000:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e'
@@ -48,7 +60,7 @@ Mappings:
       AMI: ami-0245d318c6788de52 # Amazon Linux 2
 
 Resources:
-  PrivateSubNetSecurityGroup:
+  webAutoScalingSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable HTTP, HTTPS, SSH access
@@ -61,7 +73,23 @@ Resources:
           CidrIp: !Ref SSHLocation
         - IpProtocol: tcp
           FromPort: '80'
+          ToPort: '80'
+          CidrIp: !Ref HTTPLocation
+        - IpProtocol: tcp
+          FromPort: '81'
           ToPort: '81'
+          CidrIp: !Ref HTTPLocation
+
+  webLoadBalancerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP, HTTPS, SSH access
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
           CidrIp: !Ref HTTPLocation
         - IpProtocol: tcp
           FromPort: '443'
@@ -100,7 +128,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
-        - !Ref PrivateSubNetSecurityGroup
+        - !Ref webAutoScalingSecurityGroup
 
   webASG:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -115,6 +143,7 @@ Resources:
       LaunchConfigurationName: !Ref LaunchConfig
       VPCZoneIdentifier:
         - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
       Tags:
         - Key: "Name"
           Value: "aveli-ASG"
@@ -126,7 +155,7 @@ Resources:
       Subnets:
         - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
       SecurityGroups:
-        - Ref: PrivateSubNetSecurityGroup
+        - Ref: webLoadBalancerSecurityGroup
       Listeners:
         - InstancePort: '81'
           LoadBalancerPort: '80'
@@ -142,22 +171,17 @@ Resources:
           Target: "HTTP:80/"
           Timeout: 5
           UnhealthyThreshold: 2
-
       Tags:
         - Key: 'Name'
           Value: 'web-LB'
-        - Key: 'env'
+        - Key: 'Environment'
           Value: 'dev'
-
-  ElasticIP:
-    Type: AWS::EC2::EIP
 
   WebDNSRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneName: !Ref 'HostedZone'
-      Name: !Sub 'web-app.${HostedZone}'
+      HostedZoneName: !Ref 'HostedZoneName'
+      Name: !Sub 'web-app.${HostedZoneName}'
       Type: CNAME
       TTL: '300'
       ResourceRecords: [ !GetAtt WebLoadBalancer.DNSName ]
-    DependsOn: ElasticIP
