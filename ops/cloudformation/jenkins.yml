@@ -141,10 +141,9 @@ Resources:
             PATH=$PATH:/opt/aws/bin/
 
             aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
-            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --id 1 --region ${AWS::Region}
             sleep 1m
             curl -sS http://localhost:8080
-            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --id 2 --region ${AWS::Region}
+            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
           - ver: !Ref ScriptVersion
 
   MyServerGroup:
@@ -169,12 +168,30 @@ Resources:
           PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
-        Count: 2
+        Count: 1
         Timeout: "PT20M"
+#    UpdatePolicy:
+#      AutoScalingScheduledAction:
+#        IgnoreUnmodifiedGroupSizeProperties: 'true'
+#      AutoScalingRollingUpdate:
+#        MinInstancesInService: '1'
+#        WaitOnResourceSignals: 'true'
+
+#  WaitHandle:
+#    Type: AWS::CloudFormation::WaitConditionHandle
+
+#  WaitCondition:
+#    Type: AWS::CloudFormation::WaitCondition
+#    DependsOn: "MyServerGroup"
+#    Properties: 
+#      Handle: !Ref WaitHandle
+#      Timeout: "300"
+#      Count: 2
 
   JenkinsLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
+      LoadBalancerName: !Ref "AWS::StackName"
       Subnets:
         - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
       SecurityGroups:
