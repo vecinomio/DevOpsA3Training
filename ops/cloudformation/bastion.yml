@@ -40,7 +40,7 @@
       us-east-1:
         AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
       us-west-1:
-        AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
+        AMI: ami-0245d318c6788de52 # Amazon Linux 2
 
   Resources:
     BastionSecurityGroup:
