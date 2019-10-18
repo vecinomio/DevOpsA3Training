@@ -1,5 +1,11 @@
-# For manual creation/update use:
-# aws cloudformation deploy --stack-name alb                            \
+# ----------------------------- Instructions: ---------------------------------
+# 1. Check VPC Stack. It must be up:
+#    aws cloudformation describe-stacks --stack-name ${VPCStackName}
+# 2. Validate bastion template:
+#    aws cloudformation validate-template --template-body \
+#    file://ops/cloudformation/bastion.yml
+# 3. Create ALB Stack:
+#    aws cloudformation deploy --stack-name alb                         \
 #                           --template-file ops/cloudformation/alb.yml  \
 #                           --parameter-overrides                       \
 #                             VPCStackName=DevVPC | ProdVPC             \
@@ -89,30 +95,51 @@
         UnhealthyThresholdCount: 2
         Matcher:
           HttpCode: '200-299'
-        Name: TGWeb
+        Name: tgWeb
         Port: 80
         Protocol: HTTP
         TargetType: instance
-        # Targets:
-        # - Id:
-        #     - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
-          # Port: 80
         VpcId:
           Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
         Tags:
         - Key: Name
-          Value: TGWeb
+          Value: tgWeb
         - Key: Port
           Value: 80
+
+    JenkinsTargetGroup:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        HealthCheckIntervalSeconds: 10
+        HealthCheckPath: '/'
+        HealthCheckProtocol: HTTP
+        HealthCheckTimeoutSeconds: 5
+        HealthyThresholdCount: 2
+        UnhealthyThresholdCount: 2
+        Matcher:
+          HttpCode: '200'
+        Name: tgJenkins
+        Port: 8080
+        Protocol: HTTP
+        TargetType: instance
+        VpcId:
+          Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+        Tags:
+        - Key: Name
+          Value: tgJenkins
+        - Key: Port
+          Value: 8080
 
     HttpListener:
       Type: AWS::ElasticLoadBalancingV2::Listener
       Properties:
         DefaultActions:
-          - TargetGroupArn: !Ref WebTargetGroup
-            Type: forward
-        LoadBalancerArn:
-            Ref: AppLoadBalancer
+          - Type: redirect
+            RedirectConfig:
+              Protocol: HTTPS
+              Port: 443
+              StatusCode: HTTP_301
+        LoadBalancerArn: !Ref AppLoadBalancer
         Port: 80
         Protocol: HTTP
 
@@ -147,10 +174,25 @@
         TTL: '300'
         ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
 
+    jenkinsRecordSet:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneName: !Sub "${HostedZoneName}."
+        Name: !Sub "jen.${HostedZoneName}."
+        Type: CNAME
+        TTL: '300'
+        ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
+
   Outputs:
-    TGWebARN:
+    tgWebARN:
       Description: "ARN of the Target Group Web"
       Value: !Ref "WebTargetGroup"
       Export:
         Type: String
-        Name: !Sub "${AWS::StackName}-TGWeb-ARN"
+        Name: !Sub "${AWS::StackName}-tgWeb-ARN"
+    tgJenkinsARN:
+      Description: "ARN of the Target Group Jenkins"
+      Value: !Ref "JenkinsTargetGroup"
+      Export:
+        Type: String
+        Name: !Sub "${AWS::StackName}-tgJenkins-ARN"
