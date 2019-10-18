@@ -93,10 +93,6 @@
         Port: 80
         Protocol: HTTP
         TargetType: instance
-        # Targets:
-        # - Id:
-        #     - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
-          # Port: 80
         VpcId:
           Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
         Tags:
