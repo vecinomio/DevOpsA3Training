@@ -1,0 +1,148 @@
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name alb                            \
+#                           --template-file ops/cloudformation/alb.yml  \
+#                           --parameter-overrides                       \
+#                             VPCStackName=DevVPC | ProdVPC             \
+#                             HostedZoneName=<HostedZoneName>           \
+#                           --tags                                      \
+#                             t1=v1                                     \
+#                             t2=v2                                     \
+#                           --region <region>                           \
+#                           --profile <profile>
+---
+  AWSTemplateFormatVersion: "2010-09-09"
+
+  Description: "Creates: SSL Certificate, ALB Security Group, App Load Balacer,
+                ALB Target groups, Record Sets."
+
+  Parameters:
+    VPCStackName:
+      Type: String
+      AllowedValues: [ DevVPC, ProdVPC ]
+    IPrange:
+      Description: The IP address range that can be used for HTTP and HTTPS
+      Type: String
+      Default: 0.0.0.0/0
+      ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    InstanceType:
+      Type: String
+      Description: Type of EC2 instance.
+      Default: t2.micro
+      AllowedValues: [ t2.micro, t2.small, t2.medium ]
+      ConstraintDescription: Must be a valid EC2 instance type.
+    HostedZoneName:
+      Type: String
+      Description: Project hosted zone name.
+
+  Resources:
+    SSLCertificate:
+      Type: AWS::CertificateManager::Certificate
+      Properties:
+        DomainName: !Ref HostedZoneName
+        ValidationMethod: DNS
+        Tags:
+          - Key: "Name"
+            Value: "WebSSLCert"
+
+    ALBSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+        GroupDescription: Enable HTTP and HTTPS access via ports 80 and 443
+        VpcId:
+          Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: !Ref IPrange
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: !Ref IPrange
+        Tags:
+          - Key: "Name"
+            Value: "ALB"
+
+    AppLoadBalancer:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      Properties:
+        IpAddressType: "ipv4"
+        Name: "A3-ALB"
+        Scheme: "internet-facing"
+        SecurityGroups:
+          - Ref: ALBSecurityGroup
+        Subnets:
+          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
+          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet1"
+        Tags:
+          - Key: "Name"
+            Value: "A3-ALB"
+
+    WebTargetGroup:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        HealthCheckIntervalSeconds: 10
+        HealthCheckPath: '/'
+        HealthCheckProtocol: HTTP
+        HealthCheckTimeoutSeconds: 5
+        HealthyThresholdCount: 2
+        UnhealthyThresholdCount: 2
+        Matcher:
+          HttpCode: '200-299'
+        Name: TGWeb
+        Port: 80
+        Protocol: HTTP
+        TargetType: instance
+        # Targets:
+        # - Id:
+        #     - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
+          # Port: 80
+        VpcId:
+          Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+        Tags:
+        - Key: Name
+          Value: TGWeb
+        - Key: Port
+          Value: 80
+
+    HttpListener:
+      Type: AWS::ElasticLoadBalancingV2::Listener
+      Properties:
+        DefaultActions:
+          - TargetGroupArn: !Ref WebTargetGroup
+            Type: forward
+        LoadBalancerArn:
+            Ref: AppLoadBalancer
+        Port: 80
+        Protocol: HTTP
+
+    HttpsListener:
+      Type: 'AWS::ElasticLoadBalancingV2::Listener'
+      Properties:
+        Certificates:
+          - CertificateArn: !Ref SSLCertificate
+        DefaultActions:
+          - TargetGroupArn: !Ref WebTargetGroup
+            Type: forward
+        LoadBalancerArn: !Ref AppLoadBalancer
+        Port: 443
+        Protocol: HTTPS
+
+    MainWebRecordSet:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        AliasTarget:
+          HostedZoneId: !GetAtt AppLoadBalancer.CanonicalHostedZoneID
+          DNSName: !GetAtt AppLoadBalancer.DNSName
+        HostedZoneName: !Sub "${HostedZoneName}."
+        Name: !Sub "${HostedZoneName}."
+        Type: A
+
+    wwwWebRecordSet:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneName: !Sub "${HostedZoneName}."
+        Name: !Sub "www.${HostedZoneName}."
+        Type: CNAME
+        TTL: '300'
+        ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
