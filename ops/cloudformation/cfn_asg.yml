@@ -35,11 +35,8 @@ Parameters:
     Type: String
     Description: Type of EC2 instance.
     Default: t2.micro
+    AllowedValues: [ t2.micro, t2.small, t2.medium ]
     ConstraintDescription: Must be a valid EC2 instance type.
-  VolumeSize:
-    Type: Number
-    Description: Volume-size of persistent EBS for Bastion-host in Gb
-    Default: 10
   HostedZoneName:
     Type: String
     Description: Project hosted zone.
