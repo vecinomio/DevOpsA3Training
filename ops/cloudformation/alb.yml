@@ -1,9 +1,9 @@
 # ----------------------------- Instructions: ---------------------------------
 # 1. Check VPC Stack. It must be up:
 #    aws cloudformation describe-stacks --stack-name ${VPCStackName}
-# 2. Validate bastion template:
+# 2. Validate alb template:
 #    aws cloudformation validate-template --template-body \
-#    file://ops/cloudformation/bastion.yml
+#    file://ops/cloudformation/alb.yml
 # 3. Create ALB Stack:
 #    aws cloudformation deploy --stack-name alb                         \
 #                           --template-file ops/cloudformation/alb.yml  \
