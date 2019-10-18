@@ -161,6 +161,9 @@ Resources:
         - Key: 'Name'
           Value: 'Jenkins'
           PropagateAtLaunch: true
+        - Key: 'Environment'
+          Value: 'CI'
+          PropagateAtLaunch: true
         - Key: 'Service'
           Value: 'Jenkins'
           PropagateAtLaunch: true
@@ -188,6 +191,8 @@ Resources:
       Tags:
         - Key: 'Name'
           Value: 'Jenkins'
+        - Key: 'Environment'
+          Value: 'CI'
         - Key: 'Service'
           Value: 'Jenkins'
 
