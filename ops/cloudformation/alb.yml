@@ -130,6 +130,20 @@
         - Key: Port
           Value: 8080
 
+    JenkinsListenerRule:
+      Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+      Properties:
+        Actions:
+          - Type: forward
+            TargetGroupArn: !Ref JenkinsTargetGroup
+        Conditions:
+          - Field: host-header
+            HostHeaderConfig:
+              Values:
+                - 'jen.devopsa3.me.uk'
+        ListenerArn: !Ref HttpsListener
+        Priority: 1
+
     HttpListener:
       Type: AWS::ElasticLoadBalancingV2::Listener
       Properties:
