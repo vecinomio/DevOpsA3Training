@@ -214,8 +214,10 @@ function mount_jenkins_data_volume() {
     # Install the xfsprogs package since we need an XFS volume
     wait_until yum install xfsprogs -y
     log "Installed xfsprogs package."
+  fi
 
-    # Create a new file system
+  # Create a new file system if needed
+  if [[ $(blkid -p -u filesystem ${device}) != 0 ]]; then
     mkfs.xfs -f ${device}
   fi
 
@@ -231,7 +233,7 @@ EOF
   log "Added fstab entry."
 
   # Mount the file system as /var/lib/jenkins
-  mount ${mount_point}
+  mount -t xfs ${device} ${mount_point}
   log "Mounted data volume."
 }
 
@@ -271,4 +273,3 @@ function main() {
 }
 
 main "${@}"
-

@@ -170,23 +170,6 @@ Resources:
       ResourceSignal:
         Count: 1
         Timeout: "PT20M"
-#    UpdatePolicy:
-#      AutoScalingScheduledAction:
-#        IgnoreUnmodifiedGroupSizeProperties: 'true'
-#      AutoScalingRollingUpdate:
-#        MinInstancesInService: '1'
-#        WaitOnResourceSignals: 'true'
-
-#  WaitHandle:
-#    Type: AWS::CloudFormation::WaitConditionHandle
-
-#  WaitCondition:
-#    Type: AWS::CloudFormation::WaitCondition
-#    DependsOn: "MyServerGroup"
-#    Properties: 
-#      Handle: !Ref WaitHandle
-#      Timeout: "300"
-#      Count: 2
 
   JenkinsLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
