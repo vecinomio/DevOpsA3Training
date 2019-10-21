@@ -1,8 +1,14 @@
-# Creates a EBS volume for Jenkins with retention policy for 5 daily snapshots.
-#
+# ----------------------------- Instructions: ---------------------------------
+# 1. Check VPC Stack. It must be up:
+#    aws cloudformation describe-stacks --stack-name ${VPCStackName}
+# 2. Validate ebs-volume template:
+#    aws cloudformation validate-template --template-body \
+#    file://ops/cloudformation/ebs-volume.yml
+# 3. Create ebs-volume Stack:
 # aws cloudformation deploy --template-file ebs-volume.yml --stack-name jenkins-ebs --capabilities CAPABILITY_IAM
 #
 AWSTemplateFormatVersion: '2010-09-09'
+Description: "Creates a EBS volume for Jenkins with retention policy for 5 daily snapshots"
 Parameters:
   Size:
     Type: Number

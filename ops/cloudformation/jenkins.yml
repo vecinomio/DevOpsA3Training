@@ -1,8 +1,18 @@
-# Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
-#
+# ----------------------------- Instructions: ---------------------------------
+# 1. Check VPC Stack. It must be up:
+#    aws cloudformation describe-stacks --stack-name ${VPCStackName}
+# 2. Check alb Stack. It must be up:
+#    aws cloudformation describe-stacks --stack-name ${albStackName}
+# 3. Check ebs-volume Stack. It must be up:
+#    aws cloudformation describe-stacks --stack-name ${ebsVolumeStackName}
+# 4. Validate jenkins template:
+#    aws cloudformation validate-template --template-body \
+#    file://ops/cloudformation/jenkins.yml
+# 5. Create ALB Stack:
 # aws cloudformation deploy --template-file ops/cloudformation/jenkins.yml \
 #                           --stack-name jenkins \
-#                           --parameter-overrides VPCStackName=DevVPC ScriptVersion=0.0.1 \
+#                           --parameter-overrides \
+#                             VPCStackName=DevVPC ScriptVersion=0.0.1 \
 #                           --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "Creates an ASG 1:1 for Jenkins, attaches or creates persistent EBS"
@@ -11,23 +21,19 @@ Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of the SSH keypair to use for the EC2 instances.
-    Default: jenkins
-
+    Default: imaki_NVirginia
   VPCStackName:
     Type: String
     MinLength: 1
-
   InstanceType:
     Type: String
     Description: Type of EC2 instance
     Default: t2.micro
     ConstraintDescription: Must be a valid EC2 instance type.
-
   S3Path:
     Type: String
     Description: The S3 path
     Default: devopsa3
-
   ScriptVersion:
     Type: String
     Description: Bootstrap script version
