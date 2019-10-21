@@ -44,7 +44,7 @@
     SSLCertificate:
       Type: AWS::CertificateManager::Certificate
       Properties:
-        DomainName: !Ref HostedZoneName
+        DomainName: !Join ['.', ['*', !Ref 'HostedZoneName']]
         ValidationMethod: DNS
         Tags:
           - Key: "Name"
