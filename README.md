@@ -21,10 +21,10 @@ Resources will create in Public Subnet 0 of custom VPC:
 
 # To create Bastion stack:
 
-   BastionStackName="bastion"
-   VPCStackName="DevVPC" or "ProdVPC"
-   HostedZone="<HostedZone>"
-   Region="us-east-1"
+   * BastionStackName="bastion"
+   * VPCStackName="DevVPC" or "ProdVPC"
+   * HostedZone="your.hosted.zone"
+   * Region="us-east-1"
 
 1. Clone repository from github:
    - git clone https://github.com/IYermakov/DevOpsA3Training.git
