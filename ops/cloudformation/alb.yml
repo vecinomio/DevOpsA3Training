@@ -48,7 +48,7 @@
         ValidationMethod: DNS
         Tags:
           - Key: "Name"
-            Value: "WebSSLCert"
+            Value: "sslCert"
 
     ALBSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
@@ -210,3 +210,9 @@
       Export:
         Type: String
         Name: !Sub "${AWS::StackName}-tgJenkins-ARN"
+    sslCert:
+      Description: "ARN of the SSL Certificate created in this stack"
+      Value: !Ref SSLCertificate
+      Export:
+        Type: String
+        Name: !Sub "${AWS::StackName}-sslCert-ARN"
