@@ -44,11 +44,13 @@
     SSLCertificate:
       Type: AWS::CertificateManager::Certificate
       Properties:
-        DomainName: !Join ['.', ['*', !Ref 'HostedZoneName']]
-        ValidationMethod: DNS
+        DomainName: !Ref 'HostedZoneName'
+        SubjectAlternativeNames:
+          - !Join ['.', ['*', !Ref 'HostedZoneName']]
+        ValidationMethod: 'DNS'
         Tags:
-          - Key: "Name"
-            Value: "sslCert"
+          - Key: 'Name'
+            Value: 'sslCert'
 
     ALBSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
