@@ -69,25 +69,25 @@ Resources:
           ToPort: '80'
           CidrIp: !Ref HTTPLocation
         - IpProtocol: tcp
-          FromPort: '81'
-          ToPort: '81'
-          CidrIp: !Ref HTTPLocation
-
-  webLoadBalancerSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Enable HTTP, HTTPS, SSH access
-      VpcId:
-        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: !Ref HTTPLocation
-        - IpProtocol: tcp
           FromPort: '443'
           ToPort: '443'
           CidrIp: !Ref HTTPLocation
+
+#  webLoadBalancerSecurityGroup:
+#    Type: 'AWS::EC2::SecurityGroup'
+#    Properties:
+#      GroupDescription: Enable HTTP, HTTPS, SSH access
+#      VpcId:
+#        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+#      SecurityGroupIngress:
+#        - IpProtocol: tcp
+#          FromPort: '80'
+#          ToPort: '80'
+#          CidrIp: !Ref HTTPLocation
+#        - IpProtocol: tcp
+#          FromPort: '443'
+#          ToPort: '443'
+#          CidrIp: !Ref HTTPLocation
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
@@ -118,7 +118,7 @@ Resources:
             chmod 2775 /var/www
             sleep 10s
             curl -sS http://localhost
-            cfn-signal -e $? --stack ${AWS::StackName} --resource webASG --region ${AWS::Region}
+            cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
             echo -------------------------END-----------------------------
       AssociatePublicIpAddress: "false"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
@@ -127,15 +127,18 @@ Resources:
       SecurityGroups:
         - !Ref webAutoScalingSecurityGroup
 
-  webASG:
+  webAppASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: webASG
+      AutoScalingGroupName: webAppASG
       MinSize: "1"
       MaxSize: "3"
       DesiredCapacity: "2"
-      LoadBalancerNames:
-        - Ref: WebLoadBalancer
+#      LoadBalancerNames:
+#        - Ref: webAppLoadBalancer
+      TargetGroupARNs:
+        - Fn::ImportValue: "alb-tgWeb-ARN"
+#        - !Ref webAppTargetGroup
       HealthCheckGracePeriod: 300
       LaunchConfigurationName: !Ref LaunchConfig
       VPCZoneIdentifier:
@@ -150,39 +153,126 @@ Resources:
         Count: 2
         Timeout: "PT20M"
 
-  WebLoadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
-    Properties:
-      Subnets:
-        - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
-      SecurityGroups:
-        - Ref: webLoadBalancerSecurityGroup
-      Listeners:
-        - InstancePort: '81'
-          LoadBalancerPort: '80'
-          Protocol: HTTP
-        - InstancePort: '80'
-          InstanceProtocol: HTTP
-          LoadBalancerPort: '443'
-          Protocol: HTTPS
-          SSLCertificateId: !Ref SSLCertificate
-      HealthCheck:
-          HealthyThreshold: 10
-          Interval: 30
-          Target: "HTTP:80/"
-          Timeout: 5
-          UnhealthyThreshold: 2
-      Tags:
-        - Key: 'Name'
-          Value: 'web-LB'
-        - Key: 'Environment'
-          Value: 'dev'
 
-  WebDNSRecord:
-    Type: AWS::Route53::RecordSet
+
+
+#  webAppLoadBalancer:
+#    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+#    Properties:
+#      IpAddressType: "ipv4"
+#      Name: "aveli-ALB"
+#      Scheme: "internet-facing"
+#      SecurityGroups:
+#        - Ref: webLoadBalancerSecurityGroup
+#      Subnets:
+#        - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
+#        - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet1"
+#      Tags:
+#        - Key: "Name"
+#          Value: "aveli-ALB"
+
+#  webAppTargetGroup:
+#    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+#    Properties:
+#      HealthCheckIntervalSeconds: 10
+#      HealthCheckPath: '/'
+#      HealthCheckProtocol: HTTP
+#      HealthCheckTimeoutSeconds: 5
+#      HealthyThresholdCount: 2
+#      UnhealthyThresholdCount: 2
+#      Matcher:
+#        HttpCode: '200-299'
+#      Name: webAppTG
+#      Port: 80
+#      Protocol: HTTP
+#      TargetType: instance
+#      VpcId:
+#        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+#      Tags:
+#      - Key: Name
+#        Value: webAppTG
+#      - Key: Port
+#        Value: 80
+
+  webAppHttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      HostedZoneName: !Ref 'HostedZoneName'
-      Name: !Sub 'web-app.${HostedZoneName}'
-      Type: CNAME
-      TTL: '300'
-      ResourceRecords: [ !GetAtt WebLoadBalancer.DNSName ]
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            StatusCode: HTTP_301
+#      LoadBalancerArn: !Ref webAppLoadBalancer
+      LoadBalancerArn: arn:aws:elasticloadbalancing:us-east-1:054017840000:loadbalancer/app/A3-ALB/55f0f8ef7f2d1601
+      Port: 80
+      Protocol: HTTP
+
+#  webAppHttpsListener:
+#    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+#    Properties:
+#      Certificates:
+#        - CertificateArn: !Ref SSLCertificate
+#      DefaultActions:
+##        - TargetGroupArn: !Ref webAppTargetGroup
+#          TargetGroupArn:
+#              - Fn::ImportValue: "alb-tgWeb-ARN"
+#          Type: forward
+##      LoadBalancerArn: !Ref webAppLoadBalancer
+#      LoadBalancerArn: "arn:aws:elasticloadbalancing:us-east-1:054017840000:loadbalancer/app/A3-ALB/55f0f8ef7f2d1601"
+#      Port: 443
+#      Protocol: HTTPS
+
+#  WebLoadBalancer:
+#    Type: AWS::ElasticLoadBalancing::LoadBalancer
+#    Properties:
+#      Subnets:
+#        - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
+#      SecurityGroups:
+#        - Ref: webLoadBalancerSecurityGroup
+#      Listeners:
+#        - InstancePort: '81'
+#          LoadBalancerPort: '80'
+#          Protocol: HTTP
+#        - InstancePort: '80'
+#          InstanceProtocol: HTTP
+#          LoadBalancerPort: '443'
+#          Protocol: HTTPS
+#          SSLCertificateId: !Ref SSLCertificate
+#      HealthCheck:
+#          HealthyThreshold: 10
+#          Interval: 30
+#          Target: "HTTP:80/"
+#          Timeout: 5
+#          UnhealthyThreshold: 2
+#      Tags:
+#        - Key: 'Name'
+#          Value: 'web-LB'
+#        - Key: 'Environment'
+#          Value: 'dev'
+
+#  WebDNSRecord:
+#    Type: AWS::Route53::RecordSet
+#    Properties:
+#      HostedZoneName: !Ref 'HostedZoneName'
+#      Name: !Sub 'web-app.${HostedZoneName}'
+#      Type: CNAME
+#      TTL: '300'
+#      ResourceRecords: [ !GetAtt webAppLoadBalancer.DNSName ]
+
+#  webAppListenerRule:
+#    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+#    Properties:
+#      Actions:
+#        - Type: forward
+##          TargetGroupArn: !Ref webAppTargetGroup
+##          TargetGroupArn:
+##            - Fn::ImportValue: "alb-tgWeb-ARN"
+#      Conditions:
+#        - Field: host-header
+#          HostHeaderConfig:
+#            Values:
+#              - 'web-app.devopsa3.me.uk'
+##      ListenerArn: !Ref webAppHttpsListener
+#      ListenerArn: "arn:aws:elasticloadbalancing:us-east-1:054017840000:listener/app/A3-ALB/55f0f8ef7f2d1601/1d0d6d32a5834971"
+#      Priority: 1
