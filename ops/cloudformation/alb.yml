@@ -171,7 +171,7 @@
         Port: 443
         Protocol: HTTPS
 
-    MainWebRecordSet:
+    MainRecordSet:
       Type: AWS::Route53::RecordSet
       Properties:
         AliasTarget:
@@ -181,7 +181,7 @@
         Name: !Sub "${HostedZoneName}."
         Type: A
 
-    wwwWebRecordSet:
+    WwwRecordSet:
       Type: AWS::Route53::RecordSet
       Properties:
         HostedZoneName: !Sub "${HostedZoneName}."
@@ -190,7 +190,7 @@
         TTL: '300'
         ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
 
-    jenkinsRecordSet:
+    JenkinsRecordSet:
       Type: AWS::Route53::RecordSet
       Properties:
         HostedZoneName: !Sub "${HostedZoneName}."
