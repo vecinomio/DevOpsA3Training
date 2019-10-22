@@ -194,7 +194,7 @@
       Type: AWS::Route53::RecordSet
       Properties:
         HostedZoneName: !Sub "${HostedZoneName}."
-        Name: !Sub "jen.${HostedZoneName}."
+        Name: !Sub "ci.${HostedZoneName}."
         Type: CNAME
         TTL: '300'
         ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
