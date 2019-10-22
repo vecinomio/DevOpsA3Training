@@ -172,6 +172,7 @@
       Properties:
         VPCZoneIdentifier:
           - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
+          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet1"
         LaunchConfigurationName: !Ref LaunchConfig
         MinSize: 1
         MaxSize: 2
