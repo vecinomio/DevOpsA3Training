@@ -1,18 +1,10 @@
-# ----------------------------- Instructions: ---------------------------------
-# 1. Check VPC Stack. It must be up:
-#    aws cloudformation describe-stacks --stack-name ${VPCStackName}
-# 2. Validate alb template:
-#    aws cloudformation validate-template --template-body \
-#    file://ops/cloudformation/alb.yml
-# 3. Create ALB Stack:
+# To Create ALB Stack:
 #    aws cloudformation deploy --stack-name alb                         \
 #                           --template-file ops/cloudformation/alb.yml  \
 #                           --parameter-overrides                       \
 #                             VPCStackName=DevVPC | ProdVPC             \
-#                             HostedZoneName=your.hosted.zone.name           \
-#                           --tags                                      \
-#                             t1=v1                                     \
-#                             t2=v2                                     \
+#                             HostedZoneName=your.hosted.zone.name      \
+#                           --tags Key1=Value1 Key2=Value2              \
 #                           --region <region>                           \
 #                           --profile <profile>
 ---
