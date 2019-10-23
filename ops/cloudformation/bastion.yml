@@ -1,3 +1,13 @@
+# To Create Bastion Stack:
+#    aws cloudformation deploy --stack-name bastion                         \
+#                           --template-file ops/cloudformation/bastion.yml  \
+#                           --parameter-overrides                           \
+#                             VPCStackName=DevVPC | ProdVPC                 \
+#                             HostedZoneName=your.hosted.zone.name          \
+#                           --tags Key1=Value1 Key2=Value2                  \
+#                           --region <region>                               \
+#                           --profile <profile>
+---
   AWSTemplateFormatVersion: "2010-09-09"
 
   Description: "Creates AutoScalingGroup with only one Bastion-host.
