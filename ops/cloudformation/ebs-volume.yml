@@ -44,9 +44,9 @@
           - Key: "Name"
             Value: "Jenkins-ebs"
           - Key: "Service"
-            Value: "Jenkins"
+            Value: !Ref Service
           - Key: "Environment"
-            Value: "ci"
+            Value: !Ref Environment
         VolumeType: gp2
 
     DLMRole:

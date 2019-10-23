@@ -28,6 +28,14 @@
     ScriptVersion:
       Type: String
       Description: Bootstrap script version
+    Service:
+      Type: String
+      Description: lifecycle policy tag
+      Default: jenkins
+    Environment:
+      Type: String
+      Description: Normally - ci
+      Default: ci
 
   Mappings:
     RegionMap:
@@ -118,7 +126,7 @@
         Roles:
           - Ref: InstanceRole
 
-    SimpleConfig:
+    JenkinsLaunchConfig:
       Type: AWS::AutoScaling::LaunchConfiguration
       Properties:
         ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
@@ -145,13 +153,13 @@
               --resource MyServerGroup --region ${AWS::Region}
             - ver: !Ref ScriptVersion
 
-    MyServerGroup:
+    JenkinsAutoScalingGroup:
       Type: AWS::AutoScaling::AutoScalingGroup
       Properties:
         VPCZoneIdentifier:
           - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
           - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet1"
-        LaunchConfigurationName: !Ref SimpleConfig
+        LaunchConfigurationName: !Ref JenkinsLaunchConfig
         MinSize: '1'
         MaxSize: '1'
         TargetGroupARNs:
@@ -161,10 +169,10 @@
             Value: 'Jenkins'
             PropagateAtLaunch: true
           - Key: 'Environment'
-            Value: 'CI'
+            Value: !Ref Environment
             PropagateAtLaunch: true
           - Key: 'Service'
-            Value: 'Jenkins'
+            Value: !Ref Service
             PropagateAtLaunch: true
       CreationPolicy:
         ResourceSignal:
