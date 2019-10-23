@@ -4,8 +4,6 @@
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             HostedZoneName=<HostedZoneName><devopsa3.me.uk.> \
-#                           --tags                                             \
-#                             t1=v1                                            \
 #                           --profile <profile>
 ---
 AWSTemplateFormatVersion: "2010-09-09"
@@ -43,6 +41,7 @@ Parameters:
   SSLCertificate:
     Type: String
     Default: 'arn:aws:acm:us-east-1:054017840000:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e'
+#    Default: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e"
     Description: ARN of Certificate attached to LB
 
 Mappings:
@@ -92,7 +91,6 @@ Resources:
             usermod -a -G apache ec2-user
             chown -R ec2-user:apache /var/www
             chmod 2775 /var/www
-            sleep 10s
             curl -sS http://localhost
             cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
             echo -------------------------END-----------------------------
@@ -125,17 +123,3 @@ Resources:
       ResourceSignal:
         Count: 2
         Timeout: "PT20M"
-
-  webAppHttpListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: redirect
-          RedirectConfig:
-            Protocol: HTTPS
-            Port: 443
-            StatusCode: HTTP_301
-# ADD DEPENDENCY ARN output:
-      LoadBalancerArn: arn:aws:elasticloadbalancing:us-east-1:054017840000:loadbalancer/app/A3-ALB/55f0f8ef7f2d1601
-      Port: 80
-      Protocol: HTTP
