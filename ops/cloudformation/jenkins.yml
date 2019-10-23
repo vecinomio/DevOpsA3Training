@@ -8,7 +8,7 @@
 # 4. Validate jenkins template:
 #    aws cloudformation validate-template --template-body \
 #    file://ops/cloudformation/jenkins.yml
-# 5. Create ALB Stack:
+# 5. Create jenkins Stack:
 # aws cloudformation deploy --template-file ops/cloudformation/jenkins.yml \
 #                           --stack-name jenkins \
 #                           --parameter-overrides \
@@ -179,20 +179,3 @@ Resources:
       ResourceSignal:
         Count: 1
         Timeout: "PT20M"
-#    UpdatePolicy:
-#      AutoScalingScheduledAction:
-#        IgnoreUnmodifiedGroupSizeProperties: 'true'
-#      AutoScalingRollingUpdate:
-#        MinInstancesInService: '1'
-#        WaitOnResourceSignals: 'true'
-
-#  WaitHandle:
-#    Type: AWS::CloudFormation::WaitConditionHandle
-
-#  WaitCondition:
-#    Type: AWS::CloudFormation::WaitCondition
-#    DependsOn: "MyServerGroup"
-#    Properties:
-#      Handle: !Ref WaitHandle
-#      Timeout: "300"
-#      Count: 2
