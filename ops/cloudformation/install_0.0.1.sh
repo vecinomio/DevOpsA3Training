@@ -95,7 +95,6 @@ function get_jenkins_snapshot() {
 
   if [[ ${snapshot_id} = "None" || -z ${snapshot_id} ]]; then
     log "Valid snapshot not found."
-    echo ""
   else
     log "Found snapshot ${snapshot_id}"
     echo "${snapshot_id}"
@@ -119,7 +118,6 @@ function get_jenkins_data_volume() {
 
   if [[ ${volume_id} = "None" || -z ${volume_id} ]]; then
     log "Valid volume not found."
-    echo ""
   else
     log "Found volume ${volume_id}"
     echo "${volume_id}"
