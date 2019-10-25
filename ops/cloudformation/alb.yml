@@ -31,18 +31,22 @@
     HostedZoneName:
       Type: String
       Description: Project hosted zone name.
+    SSLCertificate:
+      Type: String
+      Description: Existing SSL Certificate.
+      Default: arn:aws:acm:us-east-1:054017840000:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e
 
   Resources:
-    SSLCertificate:
-      Type: AWS::CertificateManager::Certificate
-      Properties:
-        DomainName: !Ref 'HostedZoneName'
-        SubjectAlternativeNames:
-          - !Join ['.', ['*', !Ref 'HostedZoneName']]
-        ValidationMethod: 'DNS'
-        Tags:
-          - Key: 'Name'
-            Value: 'sslCert'
+    # SSLCertificate:
+    #   Type: AWS::CertificateManager::Certificate
+    #   Properties:
+    #     DomainName: !Ref 'HostedZoneName'
+    #     SubjectAlternativeNames:
+    #       - !Join ['.', ['*', !Ref 'HostedZoneName']]
+    #     ValidationMethod: 'DNS'
+    #     Tags:
+    #       - Key: 'Name'
+    #         Value: 'sslCert'
 
     ALBSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
@@ -210,9 +214,9 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-tgJenkins-ARN'
-    sslCert:
-      Description: 'ARN of the SSL Certificate created in this stack'
-      Value: !Ref SSLCertificate
-      Export:
-        Type: String
-        Name: !Sub '${AWS::StackName}-sslCert-ARN'
+    # sslCert:
+    #   Description: 'ARN of the SSL Certificate created in this stack'
+    #   Value: !Ref SSLCertificate
+    #   Export:
+    #     Type: String
+    #     Name: !Sub '${AWS::StackName}-sslCert-ARN'
