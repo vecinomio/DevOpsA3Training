@@ -72,9 +72,18 @@ Resources:
           #!/bin/bash -x
           echo -------------------------START-----------------------------
           PATH=$PATH:/opt/aws/bin/
-          yum -y update
-          yum -y install httpd
           PrivateIP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
+          function retryCommand() {
+              local ATTEMPTS="$1"
+              local SLEEP="$2"
+              local FUNCTION="$3"
+              for i in $(seq 1 $ATTEMPTS); do
+                  [ $i == 1 ] || sleep $SLEEP
+                  eval $FUNCTION && echo $? && break || echo $?
+              done
+          }
+          retryCommand 5 10 "yum -y update"
+          retryCommand 5 10 "yum -y install httpd"
           echo "<html><body bgcolor=black><center><font color=gold> \
           <h1>Server IP is: $PrivateIP</h1></center> \
           </body></html>" > /var/www/html/index.html
