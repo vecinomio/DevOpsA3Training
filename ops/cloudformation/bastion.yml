@@ -4,14 +4,15 @@
 #                           --parameter-overrides                           \
 #                             VPCStackName=DevVPC | ProdVPC                 \
 #                             HostedZoneName=your.hosted.zone.name          \
+#                           --capabilities CAPABILITY_NAMED_IAM             \
 #                           --tags Key1=Value1 Key2=Value2                  \
 #                           --region <region>                               \
 #                           --profile <profile>
 ---
-  AWSTemplateFormatVersion: "2010-09-09"
+  AWSTemplateFormatVersion: '2010-09-09'
 
-  Description: "Creates AutoScalingGroup with only one Bastion-host.
-                Attaches EIP and Persistent Storage to it."
+  Description: 'Creates AutoScalingGroup with only one Bastion-host.
+                Attaches EIP and Persistent Storage to it.'
 
   Parameters:
     VPCStackName:
@@ -19,7 +20,7 @@
       AllowedValues: [ DevVPC, ProdVPC ]
     KeyName:
       Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
-      Type: 'AWS::EC2::KeyPair::KeyName'
+      Type: AWS::EC2::KeyPair::KeyName
       Default: imaki_NVirginia
       ConstraintDescription: must be the name of an existing EC2 KeyPair.
     SSHLocation:
@@ -54,11 +55,11 @@
 
   Resources:
     BastionSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
+      Type: AWS::EC2::SecurityGroup
       Properties:
         GroupDescription: Enable SSH access via port 22
         VpcId:
-          Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+          Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
         SecurityGroupIngress:
           - IpProtocol: tcp
             FromPort: '22'
@@ -66,7 +67,7 @@
             CidrIp: !Ref SSHLocation
 
     BastionEIP:
-      Type: 'AWS::EC2::EIP'
+      Type: AWS::EC2::EIP
 
     BastionRecordSet:
       Type: AWS::Route53::RecordSet
@@ -82,23 +83,87 @@
     BastionVolume:
       Type: AWS::EC2::Volume
       Properties:
-        AvailabilityZone: us-east-1a
+        AvailabilityZone: !Sub '${AWS::Region}a'
         Encrypted: No
         Size: !Ref VolumeSize
         Tags:
-          - Key: "Name"
-            Value: "BastionEBS"
+          - Key: 'Name'
+            Value: 'BastionEBS'
+          - Key: 'BackupByLifecycle'
+            Value: 'Daily'
         VolumeType: gp2
+
+    DLMRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Description: 'Role for Lifecicle. Needs to creating and managing Snapshots
+                      of the Bation Persistent Volume.'
+        AssumeRolePolicyDocument:
+          Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'ec2.amazonaws.com'
+            Action:
+                - 'sts:AssumeRole'
+        Path: '/'
+        Policies:
+          - PolicyName: 'LifecicleForBastionEbs'
+            PolicyDocument:
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - ec2:CreateSnapshot
+                    - ec2:DeleteSnapshot
+                    - ec2:DescribeSnapshots
+                    - ec2:DescribeSnapshotAttribute
+                    - ec2:DescribeVolumes
+                    - ec2:DescribeVolumeAttribute
+                    - ec2:DescribeVolumeStatus
+                    - ec2:DescribeVolumesModifications
+                    - ec2:DescribeTags
+                  Resource: '*'
+                - Effect: 'Allow'
+                  Action:
+                    - ec2:CreateTags
+                  Resource: 'arn:aws:ec2:*::snapshot/*'
+
+    BastionLifecyclePolicy:
+      Type: "AWS::DLM::LifecyclePolicy"
+      Properties:
+        Description: 'Lifecycle Policy for BastionEBS'
+        ExecutionRoleArn: !GetAtt DLMRole.Arn
+        State: 'ENABLED'
+        PolicyDetails:
+          ResourceTypes:
+            - 'VOLUME'
+          TargetTags:
+            - Key: 'BackupByLifecycle'
+              Value: 'Daily'
+          Schedules:
+            -
+              Name: 'Daily Snapshots'
+              TagsToAdd:
+                - Key: 'type'
+                  Value: 'DailySnapshot'
+              CreateRule:
+                Interval: 24
+                IntervalUnit: 'HOURS'
+                Times:
+                  - '06:35'
+              RetainRule:
+                Count: 3
+              CopyTags: true
 
     BastionRole:
       Type: AWS::IAM::Role
       Properties:
-        Description: Role for Bastion-host. Needs to attaching EBS and
-                     associate/disassociate EIP for itself.
-        RoleName: "BastionRole"
-        Path: "/"
+        Description: 'Role for Bastion-host. Needs to attaching EBS and
+                     associate/disassociate EIP for itself.'
+        RoleName: 'BastionRole'
+        Path: '/'
         AssumeRolePolicyDocument:
-          Version: "2012-10-17"
+          Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Principal:
@@ -107,12 +172,12 @@
               Action:
                 - sts:AssumeRole
         Policies:
-          - PolicyName: "Bastion"
+          - PolicyName: 'AttachingEIPandVolumeToBastion'
             PolicyDocument:
-              Version: "2012-10-17"
+              Version: '2012-10-17'
               Statement:
                 - Effect: Allow
-                  Resource: "*"
+                  Resource: '*'
                   Action:
                     - ec2:AssociateAddress
                     - ec2:DisassociateAddress
@@ -122,12 +187,12 @@
     BastionInstanceProfile:
       Type: AWS::IAM::InstanceProfile
       Properties:
-        Path: "/"
+        Path: '/'
         Roles:
           - Ref: BastionRole
 
     LaunchConfig:
-      Type: "AWS::AutoScaling::LaunchConfiguration"
+      Type: AWS::AutoScaling::LaunchConfiguration
       Properties:
         UserData:
           Fn::Base64: !Sub
@@ -167,9 +232,9 @@
               >> /etc/fstab
             - AllocationId: !GetAtt BastionEIP.AllocationId
               VolumeId: !Ref BastionVolume
-              Region: !Ref "AWS::Region"
-        AssociatePublicIpAddress: "true"
-        ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+              Region: !Ref 'AWS::Region'
+        AssociatePublicIpAddress: 'true'
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
         InstanceType: !Ref InstanceType
         KeyName: !Ref KeyName
         IamInstanceProfile: !Ref BastionInstanceProfile
@@ -178,16 +243,16 @@
       DependsOn: BastionVolume
 
     BastionAutoScalingGroup:
-      Type: "AWS::AutoScaling::AutoScalingGroup"
+      Type: AWS::AutoScaling::AutoScalingGroup
       Properties:
         VPCZoneIdentifier:
-          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
-          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet1"
+          - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet0'
+          - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet1'
         LaunchConfigurationName: !Ref LaunchConfig
         MinSize: 1
         MaxSize: 2
         DesiredCapacity: !Ref DesiredCapacity
         Tags:
-          - Key: "Name"
-            Value: "bastion-ASG"
+          - Key: 'Name'
+            Value: 'bastion-ASG'
             PropagateAtLaunch: true
