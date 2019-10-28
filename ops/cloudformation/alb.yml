@@ -10,7 +10,7 @@
 ---
   AWSTemplateFormatVersion: "2010-09-09"
 
-  Description: "Creates: SSL Certificate, ALB Security Group, App Load Balacer,
+  Description: "Creates: ALB Security Group, App Load Balacer,
                 ALB Target groups, Record Sets."
 
   Parameters:
@@ -32,18 +32,8 @@
       Type: String
       Description: Project hosted zone name.
 
-  Resources:
-    SSLCertificate:
-      Type: AWS::CertificateManager::Certificate
-      Properties:
-        DomainName: !Ref 'HostedZoneName'
-        SubjectAlternativeNames:
-          - !Join ['.', ['*', !Ref 'HostedZoneName']]
-        ValidationMethod: 'DNS'
-        Tags:
-          - Key: 'Name'
-            Value: 'sslCert'
 
+  Resources:
     ALBSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -155,7 +145,7 @@
       Type: 'AWS::ElasticLoadBalancingV2::Listener'
       Properties:
         Certificates:
-          - CertificateArn: !Ref SSLCertificate
+          - CertificateArn: !Sub "arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e"
         DefaultActions:
           - TargetGroupArn: !Ref WebTargetGroup
             Type: forward
@@ -210,9 +200,3 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-tgJenkins-ARN'
-    sslCert:
-      Description: 'ARN of the SSL Certificate created in this stack'
-      Value: !Ref SSLCertificate
-      Export:
-        Type: String
-        Name: !Sub '${AWS::StackName}-sslCert-ARN'
