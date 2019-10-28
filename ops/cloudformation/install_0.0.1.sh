@@ -238,19 +238,7 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
-# Install Jenkins
-#-------------------------------------------------------------------------------
-function install_jenkins() {
-  curl --silent --location http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo | sudo tee /etc/yum.repos.d/jenkins.repo
-  rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
-  wait_until yum install java-1.8.0-openjdk-devel.x86_64 -y
-  wait_until yum install jenkins -y
-  sed -i 's/JENKINS_ENABLE_ACCESS_LOG="\w*"/JENKINS_ENABLE_ACCESS_LOG="yes"/' /etc/sysconfig/jenkins
-  systemctl enable jenkins && systemctl start jenkins
-}
-
-#-------------------------------------------------------------------------------
-# Set hostname, mount or create volume, install Jenkins and additional packages.
+# Set hostname, mount or create volume
 #-------------------------------------------------------------------------------
 function main() {
   local region=$(get_ec2_instance_region)
@@ -269,7 +257,6 @@ function main() {
   set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
   yum reinstall -y aws-cli aws-cfn-bootstrap
-  install_jenkins
 }
 
 main "${@}"

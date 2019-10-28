@@ -138,10 +138,18 @@ Resources:
             set -o nounset
             set -o xtrace
             set -o pipefail
-            PATH=$PATH:/opt/aws/bin/
 
-            aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
-            sleep 1m
+#            aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
+#            sleep 1m
+            rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
+            yum -y update
+            yum install -y puppet-agent
+            export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
+
+            aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-{ver}.tar" .
+            tar -C /etc/puppetlabs/puppet -xvf puppet-{ver}.tar
+            puppet --test apply site.pp
+
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
           - ver: !Ref ScriptVersion
