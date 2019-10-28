@@ -90,7 +90,7 @@ Resources:
           retryCommand 5 10 "yum -y install tomcat"
           retryCommand 5 10 "yum -y install tomcat-webapps tomcat-admin-webapps tomcat-docs-webapp tomcat-javadoc"
           retryCommand 5 10 "yum -y install unzip"
-          systemctl start tomcat
+          systemctl restart tomcat
           systemctl enable tomcat
           systemctl status tomcat
           netstat -tulpn
@@ -104,7 +104,7 @@ Resources:
           mv webapp/ /var/lib/tomcat/webapps/
           systemctl restart tomcat
           netstat -tulpn
-          curl -sS http://localhost:8080/webapp/index.jsp
+          curl -sS http://localhost:8080/webapp/
           echo -------------------------END-----------------------------
       AssociatePublicIpAddress: "false"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
@@ -131,7 +131,7 @@ Resources:
         - Key: "Name"
           Value: "aveli-ASG"
           PropagateAtLaunch: true
-    CreationPolicy:
-      ResourceSignal:
-        Count: 2
-        Timeout: "PT20M"
+#    CreationPolicy:
+#      ResourceSignal:
+#        Count: 2
+#        Timeout: "PT20M"
