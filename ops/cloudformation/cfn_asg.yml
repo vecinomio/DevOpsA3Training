@@ -93,6 +93,7 @@ Resources:
           systemctl restart tomcat
           systemctl enable tomcat
           systemctl status tomcat
+          sleep 10s
           netstat -tulpn
           curl -sS http://localhost:8080
           mkdir webapp/
@@ -103,6 +104,7 @@ Resources:
           cd ../
           mv webapp/ /var/lib/tomcat/webapps/
           systemctl restart tomcat
+          sleep 10s
           netstat -tulpn
           curl -sS http://localhost:8080/webapp/
           echo -------------------------END-----------------------------
