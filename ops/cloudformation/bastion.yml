@@ -22,11 +22,6 @@
       Type: 'AWS::EC2::KeyPair::KeyName'
       Default: imaki_NVirginia
       ConstraintDescription: must be the name of an existing EC2 KeyPair.
-    SSHLocation:
-      Description: The IP address range that can be used to SSH to the EC2 instances
-      Type: String
-      Default: 0.0.0.0/0
-      ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
     InstanceType:
       Type: String
       Description: Type of EC2 instance.
@@ -63,7 +58,7 @@
           - IpProtocol: tcp
             FromPort: '22'
             ToPort: '22'
-            CidrIp: !Ref SSHLocation
+            CidrIp: 0.0.0.0/0
 
     BastionEIP:
       Type: 'AWS::EC2::EIP'
