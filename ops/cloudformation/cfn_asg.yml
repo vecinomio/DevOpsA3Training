@@ -60,6 +60,10 @@ Resources:
           ToPort: '80'
           CidrIp: !Ref HTTPLocation
         - IpProtocol: tcp
+          FromPort: '8080'
+          ToPort: '8080'
+          CidrIp: !Ref HTTPLocation
+        - IpProtocol: tcp
           FromPort: '443'
           ToPort: '443'
           CidrIp: !Ref HTTPLocation
@@ -83,17 +87,24 @@ Resources:
               done
           }
           retryCommand 5 10 "yum -y update"
-          retryCommand 5 10 "yum -y install httpd"
-          echo "<html><body bgcolor=black><center><font color=gold> \
-          <h1>Server IP is: $PrivateIP</h1></center> \
-          </body></html>" > /var/www/html/index.html
-          systemctl start httpd
-          systemctl enable httpd
-          usermod -a -G apache ec2-user
-          chown -R ec2-user:apache /var/www
-          chmod 2775 /var/www
-          curl -sS http://localhost
-          cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
+          retryCommand 5 10 "yum -y install tomcat"
+          retryCommand 5 10 "yum -y install tomcat-webapps tomcat-admin-webapps tomcat-docs-webapp tomcat-javadoc"
+          retryCommand 5 10 "yum -y install unzip"
+          systemctl start tomcat
+          systemctl enable tomcat
+          systemctl status tomcat
+          netstat -tulpn
+          curl -sS http://localhost:8080
+          mkdir webapp/
+          cd webapp/
+          wget https://devopsa3-simple-java-app.s3.amazonaws.com/java-tomcat-v3.zip
+          retryCommand 5 10 "unzip java-tomcat-v3.zip"
+          ls -la
+          cd ../
+          mv webapp/ /var/lib/tomcat/webapps/
+          systemctl restart tomcat
+          netstat -tulpn
+          curl -sS http://localhost:8080/webapp/index.jsp
           echo -------------------------END-----------------------------
       AssociatePublicIpAddress: "false"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
