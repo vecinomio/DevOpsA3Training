@@ -6,5 +6,5 @@ node jenkins {
 }
 
 node webserver {
-    include "role::sebserver"
+    include "role::webserver"
 }
