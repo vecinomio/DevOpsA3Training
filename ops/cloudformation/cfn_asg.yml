@@ -56,16 +56,8 @@ Resources:
           ToPort: '22'
           CidrIp: !Ref SSHLocation
         - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: !Ref HTTPLocation
-        - IpProtocol: tcp
           FromPort: '8080'
           ToPort: '8080'
-          CidrIp: !Ref HTTPLocation
-        - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
           CidrIp: !Ref HTTPLocation
 
   LaunchConfig:
@@ -76,7 +68,6 @@ Resources:
           #!/bin/bash -x
           echo -------------------------START-----------------------------
           PATH=$PATH:/opt/aws/bin/
-          PrivateIP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
           function retryCommand() {
               local ATTEMPTS="$1"
               local SLEEP="$2"
@@ -90,23 +81,18 @@ Resources:
           retryCommand 5 10 "yum -y install tomcat"
           retryCommand 5 10 "yum -y install tomcat-webapps tomcat-admin-webapps tomcat-docs-webapp tomcat-javadoc"
           retryCommand 5 10 "yum -y install unzip"
-          systemctl restart tomcat
-          systemctl enable tomcat
-          systemctl status tomcat
-          sleep 10s
-          netstat -tulpn
-          curl -sS http://localhost:8080
+          mv /var/lib/tomcat/webapps/ROOT/ /var/lib/tomcat/webapps/default-ROOT
           mkdir webapp/
           cd webapp/
           wget https://devopsa3-simple-java-app.s3.amazonaws.com/java-tomcat-v3.zip
           retryCommand 5 10 "unzip java-tomcat-v3.zip"
-          ls -la
           cd ../
-          mv webapp/ /var/lib/tomcat/webapps/
-          systemctl restart tomcat
+          mv webapp/ /var/lib/tomcat/webapps/ROOT
+          systemctl start tomcat
+          systemctl enable tomcat
           sleep 10s
-          netstat -tulpn
-          curl -sS http://localhost:8080/webapp/
+          curl -sS http://localhost:8080/index.jsp
+          cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
           echo -------------------------END-----------------------------
       AssociatePublicIpAddress: "false"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
@@ -131,9 +117,9 @@ Resources:
         - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
       Tags:
         - Key: "Name"
-          Value: "aveli-ASG"
+          Value: "webASG"
           PropagateAtLaunch: true
-#    CreationPolicy:
-#      ResourceSignal:
-#        Count: 2
-#        Timeout: "PT20M"
+    CreationPolicy:
+      ResourceSignal:
+        Count: 2
+        Timeout: "PT20M"
