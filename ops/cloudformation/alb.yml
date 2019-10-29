@@ -80,7 +80,7 @@
         Matcher:
           HttpCode: '200-299'
         Name: tgWeb
-        Port: 80
+        Port: 8080
         Protocol: HTTP
         TargetType: instance
         VpcId:
@@ -89,7 +89,7 @@
         - Key: 'Name'
           Value: 'tgWeb'
         - Key: 'Port'
-          Value: 80
+          Value: 8080
 
     JenkinsTargetGroup:
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
