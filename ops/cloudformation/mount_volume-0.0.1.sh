@@ -20,7 +20,7 @@ function error() {
 }
 
 #-------------------------------------------------------------------------------
-# Retry 10 times a command until it returns an exit code of zero. 
+# Retry 10 times a command until it returns an exit code of zero.
 #
 # @param $* - The command to run.
 #-------------------------------------------------------------------------------

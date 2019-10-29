@@ -1,6 +1,6 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
 #
-# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC ScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
+# aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   KeyPairName:
@@ -23,7 +23,11 @@ Parameters:
     Description: The S3 path
     Default: devopsa3
 
-  ScriptVersion:
+  MountScriptVersion:
+    Type: String
+    Description: Bootstrap script version for mounting volume
+
+  PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
 
@@ -139,20 +143,20 @@ Resources:
             set -o xtrace
             set -o pipefail
 
-#            aws s3 cp "s3://${S3Path}/scripts/jenkins/install_${ver}.sh" - | bash -l -s -- --hostname jenkins
-#            sleep 1m
+            aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins
             rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
             yum -y update
             yum install -y puppet-agent
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
 
-            aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-{ver}.tar" .
-            tar -C /etc/puppetlabs/puppet -xvf puppet-{ver}.tar
+            aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .
+            tar -C /etc/puppetlabs/puppet -xvf puppet-${pupver}.tar
             puppet --test apply site.pp
 
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
-          - ver: !Ref ScriptVersion
+          - ver: !Ref MountScriptVersion
+            pupver: !Ref PuppetScriptVersion
 
   MyServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup

@@ -1,11 +1,10 @@
 class profile::tomcat {
 
-    package { 'tomcat8':
-      ensure  => installed,
-      require  => Package['java-1.8.0-openjdk-devel.x86_64'],
+    func::ami_extras { 'tomcat8.5':
+      ensure => present,
     }
 
-    service { 'tomcat8':
+    service { 'tomcat':
       ensure => running,
     }
 
