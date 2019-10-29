@@ -95,13 +95,13 @@
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
       Properties:
         HealthCheckIntervalSeconds: 10
-        HealthCheckPath: '/'
+        HealthCheckPath: '/login'
         HealthCheckProtocol: HTTP
         HealthCheckTimeoutSeconds: 5
         HealthyThresholdCount: 2
         UnhealthyThresholdCount: 2
         Matcher:
-          HttpCode: '200'
+          HttpCode: '200-299'
         Name: tgJenkins
         Port: 8080
         Protocol: HTTP
