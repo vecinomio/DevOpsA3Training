@@ -3,7 +3,7 @@ class profile::jenkins {
     yumrepo { 'jenkins_repo':
       ensure   => present,
       name     => 'jenkins',
-      baseurl  => 'http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo',
+      baseurl  => 'http://pkg.jenkins-ci.org/redhat-stable/',
       enabled  => 1,
       gpgcheck => 1,
       gpgkey   => 'https://jenkins-ci.org/redhat/jenkins-ci.org.key',
