@@ -6,7 +6,7 @@ Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of the SSH keypair to use for the EC2 instances.
-    Default: jenkins
+    Default: devopsa3
 
   VPCStackName:
     Type: String
