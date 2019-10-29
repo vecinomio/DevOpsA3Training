@@ -6,7 +6,7 @@ Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of the SSH keypair to use for the EC2 instances.
-    Default: imaki_NVirginia
+    Default: jenkins
 
   VPCStackName:
     Type: String
@@ -157,12 +157,12 @@ Resources:
                     eval $FUNCTION && echo $? && break || echo $?
                 done
             }
-            aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins
+            retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
             rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
             yum -y update
-            retryCommand "yum install -y puppet-agent"
+            retryCommand 5 10 'yum install -y puppet-agent'
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
-            aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .
+            retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
             puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
             curl -sS http://localhost:8080
