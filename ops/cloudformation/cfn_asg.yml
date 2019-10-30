@@ -17,18 +17,8 @@ Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: 'AWS::EC2::KeyPair::KeyName'
-    Default: aveli-asg
+    Default: devopsa3
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
-  SSHLocation:
-    Description: The IP address range that can be used to SSH to the EC2 instances
-    Type: String
-    Default: 0.0.0.0/0
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-  HTTPLocation:
-    Description: The IP address range that can be used for HTTP/HTTPS requests
-    Type: String
-    Default: 0.0.0.0/0
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
   InstanceType:
     Type: String
     Description: Type of EC2 instance.
@@ -54,11 +44,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: !Ref SSHLocation
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: '8080'
           ToPort: '8080'
-          CidrIp: !Ref HTTPLocation
+          CidrIp: 0.0.0.0/0
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
