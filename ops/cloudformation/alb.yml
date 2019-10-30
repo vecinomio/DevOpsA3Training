@@ -17,11 +17,6 @@
     VPCStackName:
       Type: String
       AllowedValues: [ DevVPC, ProdVPC ]
-    IPrange:
-      Description: The IP address range that can be used for HTTP and HTTPS
-      Type: String
-      Default: 0.0.0.0/0
-      ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
     InstanceType:
       Type: String
       Description: Type of EC2 instance.
@@ -48,11 +43,11 @@
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
-            CidrIp: !Ref IPrange
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
             FromPort: 443
             ToPort: 443
-            CidrIp: !Ref IPrange
+            CidrIp: 0.0.0.0/0
         Tags:
           - Key: 'Name'
             Value: 'ALBsg'
