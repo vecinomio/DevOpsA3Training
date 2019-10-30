@@ -164,7 +164,8 @@ Resources:
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
-            puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
+            puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp && echo "Finished puppet"
+            sleep 30
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion
