@@ -31,6 +31,10 @@
     HostedZoneName:
       Type: String
       Description: Project hosted zone name.
+    Environment:
+      Type: String
+      Description: Dev or Prod
+      Default: Dev
 
 
   Resources:
@@ -52,6 +56,8 @@
         Tags:
           - Key: 'Name'
             Value: 'ALBsg'
+          - Key: 'Environment'
+            Value: !Ref Environment
 
     AppLoadBalancer:
       Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -67,6 +73,8 @@
         Tags:
           - Key: 'Name'
             Value: 'AppLB'
+          - Key: 'Environment'
+            Value: !Ref Environment
 
     WebTargetGroup:
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -90,6 +98,8 @@
           Value: 'tgWeb'
         - Key: 'Port'
           Value: 8080
+        - Key: 'Environment'
+          Value: !Ref Environment
 
     JenkinsTargetGroup:
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -113,6 +123,8 @@
           Value: 'tgJenkins'
         - Key: 'Port'
           Value: 8080
+        - Key: 'Environment'
+          Value: !Ref Environment
 
     JenkinsListenerRule:
       Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
