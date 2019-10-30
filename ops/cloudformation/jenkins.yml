@@ -6,7 +6,7 @@ Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of the SSH keypair to use for the EC2 instances.
-    Default: jenkins
+    Default: devopsa3
 
   VPCStackName:
     Type: String
@@ -31,25 +31,15 @@ Parameters:
     Type: String
     Description: Bootstrap script version
 
-  SSLCertificate:
+  Service:
     Type: String
-    Default: 'arn:aws:acm:us-east-1:054017840000:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e'
-    Description: ARN of Certificate attached to ELB
+    Description: lifecycle policy tag
+    Default: jenkins
 
-  DNSName:
+  Environment:
     Type: String
-    Description: DNS subdomain name for Jenkins
+    Description: Normally - ci
     Default: ci
-
-  DNSSuffix:
-    Type: String
-    Description: DNS subdomain suffix for testing purposes
-    Default: ''
-
-  R53HostedZone:
-    Type: String
-    Default: 'devopsa3.me.uk.'
-    Description: Base DNS domain name
 
 Mappings:
   RegionMap:
@@ -59,7 +49,23 @@ Mappings:
       AMI: ami-0245d318c6788de52
 
 Resources:
-  InstanceRole:
+  JenkinsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      GroupDescription: SSH, HTTP
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 8080
+        ToPort: 8080
+        CidrIp: 0.0.0.0/0
+
+  JenkinsRole:
     Type: AWS::IAM::Role
     Properties:
       Path: "/"
@@ -73,7 +79,7 @@ Resources:
               - sts:AssumeRole
 
       Policies:
-        - PolicyName: EC2
+        - PolicyName: Jenkins
           PolicyDocument:
             Statement:
               - Effect: Allow
@@ -117,21 +123,21 @@ Resources:
                   - ec2:DescribeAccountAttributes
                   - ec2:DeleteSecurityGroup
 
-  InstanceProfile:
+  JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
-        - Ref: InstanceRole
+        - Ref: JenkinsRole
 
-  SimpleConfig:
+  JenkinsLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
-      IamInstanceProfile: !Ref InstanceProfile
+      IamInstanceProfile: !Ref JenkinsProfile
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - Ref: InstanceSecurityGroup
+      - Ref: JenkinsSecurityGroup
       InstanceType: !Ref InstanceType
       AssociatePublicIpAddress: True
       UserData:
@@ -142,109 +148,49 @@ Resources:
             set -o nounset
             set -o xtrace
             set -o pipefail
-
-            aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins
+            function retryCommand() {
+                local ATTEMPTS="$1"
+                local SLEEP="$2"
+                local FUNCTION="$3"
+                for i in $(seq 1 $ATTEMPTS); do
+                    [ $i == 1 ] || sleep $SLEEP
+                    eval $FUNCTION && echo $? && break || echo $?
+                done
+            }
+            retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
             rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
             yum -y update
-            yum install -y puppet-agent
+            retryCommand 5 10 'yum install -y puppet-agent'
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
-
-            aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .
+            retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
-            puppet apply --test site.pp
-
+            puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
             curl -sS http://localhost:8080
-            cfn-signal -e $? --stack ${AWS::StackName} --resource MyServerGroup --region ${AWS::Region}
+            cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion
             pupver: !Ref PuppetScriptVersion
 
-  MyServerGroup:
+  JenkinsAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       VPCZoneIdentifier:
         - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
-      LaunchConfigurationName: !Ref SimpleConfig
+      LaunchConfigurationName: !Ref JenkinsLaunchConfig
       MinSize: '1'
       MaxSize: '1'
-      LoadBalancerNames:
-        - Ref: JenkinsLoadBalancer
+      TargetGroupARNs:
+        - Fn::ImportValue: alb-tgJenkins-ARN
       Tags:
         - Key: 'Name'
           Value: 'Jenkins'
           PropagateAtLaunch: true
         - Key: 'Environment'
-          Value: 'CI'
+          Value: !Ref Environment
           PropagateAtLaunch: true
         - Key: 'Service'
-          Value: 'Jenkins'
+          Value: !Ref Service
           PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
         Count: 1
         Timeout: "PT20M"
-
-  JenkinsLoadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
-    Properties:
-      LoadBalancerName: !Ref "AWS::StackName"
-      Subnets:
-        - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
-      SecurityGroups:
-        - Ref: LBSecurityGroup
-      Listeners:
-        - InstancePort: '8080'
-          LoadBalancerPort: '80'
-          Protocol: HTTP
-        - InstancePort: '8080'
-          InstanceProtocol: HTTP
-          LoadBalancerPort: '443'
-          Protocol: HTTPS
-          SSLCertificateId: !Ref SSLCertificate
-      Tags:
-        - Key: 'Name'
-          Value: 'Jenkins'
-        - Key: 'Environment'
-          Value: 'CI'
-        - Key: 'Service'
-          Value: 'Jenkins'
-
-  R53RecordSet:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: !Ref R53HostedZone
-      Name: !Join ['', [ !Ref DNSName, !Ref DNSSuffix, ., !Ref R53HostedZone]]
-      Type: CNAME
-      TTL: '300'
-      ResourceRecords: [ !GetAtt JenkinsLoadBalancer.DNSName ]
-
-  InstanceSecurityGroup:
-      Type: AWS::EC2::SecurityGroup
-      Properties:
-        VpcId:
-          Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
-        GroupDescription: SSH, HTTP
-        SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-
-  LBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId:
-        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
-      GroupDescription: HTTP, HTTPS
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
