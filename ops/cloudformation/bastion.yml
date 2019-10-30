@@ -39,6 +39,10 @@
       Type: Number
       Description: Desired number of instances in ASG.
       Default: 1
+    Environment:
+      Type: String
+      Description: Dev or Prod
+      Default: Dev
 
   Mappings:
     RegionMap:
@@ -59,6 +63,11 @@
             FromPort: '22'
             ToPort: '22'
             CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: 'Name'
+            Value: 'bastionSG'
+          - Key: 'Environment'
+            Value: !Ref Environment
 
     BastionEIP:
       Type: 'AWS::EC2::EIP'
@@ -83,6 +92,8 @@
         Tags:
           - Key: "Name"
             Value: "BastionEBS"
+          - Key: 'Environment'
+            Value: !Ref Environment
         VolumeType: gp2
 
     BastionRole:
@@ -184,4 +195,6 @@
         Tags:
           - Key: "Name"
             Value: "bastion-ASG"
+          - Key: 'Environment'
+            Value: !Ref Environment
             PropagateAtLaunch: true
