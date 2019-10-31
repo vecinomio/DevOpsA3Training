@@ -3,7 +3,6 @@
 #                           --template-file ops/cloudformation/cfn_asg.yml     \
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
-#                             HostedZoneName=<HostedZoneName><devopsa3.me.uk.> \
 #                           --profile <profile>
 ---
 AWSTemplateFormatVersion: "2010-09-09"
