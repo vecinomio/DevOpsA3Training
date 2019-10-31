@@ -9,7 +9,6 @@ hierarchy:
     data_hash: yaml_data
     paths:
       - "nodes/%{trusted.certname}.yaml"
-#      - "role/%{::role}-%{::env}.yaml"
       - "role/%{::role}.yaml"
       - "modules/role/%{::role}.yaml"
       - "common.yaml"

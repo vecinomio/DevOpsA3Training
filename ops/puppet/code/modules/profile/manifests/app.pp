@@ -22,8 +22,6 @@ $install_path = "/var/lib/tomcat/webapps/ROOT/${dirname}"
     archive { $filename:
       path          => "/tmp/${filename}",
       source        => 'https://devopsa3-simple-java-app.s3.amazonaws.com/java-tomcat-v3.zip',
-#      checksum      => 'f2aaf16f5e421b97513c502c03c117fab6569076',
-      checksum_type => 'sha1',
       extract       => true,
       extract_path  => '/var/lib/tomcat/webapps/ROOT',
       creates       => "${install_path}/bin",
