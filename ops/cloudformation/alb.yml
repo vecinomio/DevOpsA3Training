@@ -17,12 +17,6 @@
     VPCStackName:
       Type: String
       AllowedValues: [ DevVPC, ProdVPC ]
-    InstanceType:
-      Type: String
-      Description: Type of EC2 instance.
-      Default: t2.micro
-      AllowedValues: [ t2.micro, t2.small, t2.medium ]
-      ConstraintDescription: Must be a valid EC2 instance type.
     HostedZoneName:
       Type: String
       Description: Project hosted zone name.
