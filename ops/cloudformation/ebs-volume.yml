@@ -7,7 +7,7 @@ Parameters:
   Size:
     Type: Number
     Description: Size of volume in GB
-    Default: 8
+    Default: 5
 
   Service:
     Type: String

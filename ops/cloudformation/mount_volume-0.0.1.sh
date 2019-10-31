@@ -89,7 +89,7 @@ function get_jenkins_snapshot() {
   local snapshot_id=$(wait_until aws ec2 describe-snapshots                                                   \
                         --region ${region}                                                                    \
                         --filters Name=status,Values=completed                                                \
-                                  Name=tag:Service,Values=Jenkins                                             \
+                                  Name=tag:Service,Values=jenkins                                             \
                         --query 'Snapshots[].[SnapshotId,StartTime] | reverse(sort_by(@, &[1])) | [0] | [0]' \
                         --output text)
 
@@ -112,7 +112,7 @@ function get_jenkins_data_volume() {
   local volume_id=$(wait_until aws ec2 describe-volumes                        \
                          --region ${region}                                    \
                          --filters Name=status,Values=available                \
-                                   Name=tag:Service,Values=Jenkins             \
+                                   Name=tag:Service,Values=jenkins             \
                          --query 'Volumes[].[VolumeId,CreateTime] | reverse(sort_by(@, &[1])) | [0] | [0]'          \
                          --output text)
 

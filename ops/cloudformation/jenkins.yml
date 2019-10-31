@@ -151,10 +151,26 @@ Resources:
             function retryCommand() {
                 local ATTEMPTS="$1"
                 local SLEEP="$2"
-                local FUNCTION="$3"
+                local COMMAND="$3"
                 for i in $(seq 1 $ATTEMPTS); do
                     [ $i == 1 ] || sleep $SLEEP
-                    eval $FUNCTION && echo $? && break || echo $?
+                    eval $COMMAND && echo $? && break || echo $?
+                done
+            }
+            function retryPuppetCommand() {
+                local ATTEMPTS="$1"
+                local SLEEP="$2"
+                local COMMAND="$3"
+                for i in $(seq 1 $ATTEMPTS); do
+                    [ $i == 1 ] || sleep $SLEEP
+                    eval $COMMAND
+                    if [ $? -eq 2 ]
+                    then
+                      echo "Success"
+                      break
+                    else
+                      echo $?
+                    fi
                 done
             }
             retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
@@ -164,7 +180,7 @@ Resources:
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
-            puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp && echo "Finished puppet"
+            retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp' && echo "Finished puppet"
             sleep 30
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
