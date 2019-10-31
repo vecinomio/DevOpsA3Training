@@ -163,7 +163,7 @@ Resources:
                 local COMMAND="$3"
                 for i in $(seq 1 $ATTEMPTS); do
                     [ $i == 1 ] || sleep $SLEEP
-                    eval $COMMAND
+                    $COMMAND
                     if [ $? -eq 2 ]
                     then
                       echo "Success"
