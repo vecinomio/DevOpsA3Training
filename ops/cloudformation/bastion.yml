@@ -110,7 +110,7 @@
             - Effect: 'Allow'
               Principal:
                 Service:
-                  - 'ec2.amazonaws.com'
+                  - 'dlm.amazonaws.com'
               Action:
                   - 'sts:AssumeRole'
         Path: '/'
@@ -157,12 +157,12 @@
                 - Key: 'type'
                   Value: 'DailySnapshot'
               CreateRule:
-                Interval: 2
+                Interval: 24
                 IntervalUnit: 'HOURS'
                 Times:
-                  - '14:10'
+                  - '01:00'
               RetainRule:
-                Count: 3
+                Count: 5
               CopyTags: true
 
     BastionRole:
