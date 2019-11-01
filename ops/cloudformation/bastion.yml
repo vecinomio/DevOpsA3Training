@@ -157,10 +157,10 @@
                 - Key: 'type'
                   Value: 'DailySnapshot'
               CreateRule:
-                Interval: 24
+                Interval: 2
                 IntervalUnit: 'HOURS'
                 Times:
-                  - '01:00'
+                  - '15:20'
               RetainRule:
                 Count: 5
               CopyTags: true
