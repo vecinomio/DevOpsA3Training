@@ -22,7 +22,7 @@ This instructions provide how to create an ALB Stack in custom VPC.
 3. Set variables:
    - VPCStackName="DevVPC" or "ProdVPC"
    - Environment="Dev" or "Prod"
-   - HostedZoneName="" # Put your Hosted Zone Name in quotes.
+   - HostedZoneName="" # Put your Hosted Zone Name in quotes. Example: "hostedzone.me.uk"
    - SSLCertificateARN="" # Put your Certificate ARN in quotes.
 
 4. Validate ALB template and Create ALB Stack:
