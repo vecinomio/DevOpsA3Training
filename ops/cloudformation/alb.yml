@@ -3,6 +3,7 @@
 #                           --template-file ops/cloudformation/alb.yml  \
 #                           --parameter-overrides                       \
 #                             VPCStackName=DevVPC | ProdVPC             \
+#                             Environment=Dev | Prod                    \
 #                             HostedZoneName=your.hosted.zone.name      \
 #                           --tags Key1=Value1 Key2=Value2              \
 #                           --region <region>                           \
@@ -23,7 +24,10 @@
     Environment:
       Type: String
       Description: Dev or Prod
-      Default: Dev
+      AllowedValues: [ Dev, Prod ]
+    SSLCertificateARN:
+      Type: String
+      Description: ARN of existing SSL Certificate.
 
   Resources:
     ALBSecurityGroup:
@@ -145,7 +149,7 @@
       Type: 'AWS::ElasticLoadBalancingV2::Listener'
       Properties:
         Certificates:
-          - CertificateArn: !Sub "arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/98dbbe8d-d6a8-47c0-ad7a-9a25928a806e"
+          - CertificateArn: !Ref SSLCertificateARN
         DefaultActions:
           - TargetGroupArn: !Ref WebTargetGroup
             Type: forward
