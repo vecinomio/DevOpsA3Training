@@ -16,14 +16,14 @@ This instructions provide how to create an ALB Stack in custom VPC.
 1. Clone repository from github:
    - git clone https://github.com/IYermakov/DevOpsA3Training.git
 
-2. Check VPC Stack. It must be up:
-   - aws cloudformation describe-stacks --stack-name ${VPCStackName}
+2. Set variables:
+  - VPCStackName="DevVPC" or "ProdVPC"
+  - Environment="Dev" or "Prod"
+  - HostedZoneName="" # Put your Hosted Zone Name in quotes. Example: "hostedzone.me.uk"
+  - SSLCertificateARN="" # Put your Certificate ARN in quotes.
 
-3. Set variables:
-   - VPCStackName="DevVPC" or "ProdVPC"
-   - Environment="Dev" or "Prod"
-   - HostedZoneName="" # Put your Hosted Zone Name in quotes. Example: "hostedzone.me.uk"
-   - SSLCertificateARN="" # Put your Certificate ARN in quotes.
+3. Check VPC Stack. It must be up:
+   - aws cloudformation describe-stacks --stack-name ${VPCStackName}
 
 4. Validate ALB template and Create ALB Stack:
       - aws cloudformation validate-template --template-body \
