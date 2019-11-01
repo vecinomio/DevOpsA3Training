@@ -19,7 +19,7 @@ This instructions provide how to create a Bastion Stack in custom VPC.
 3. Set variables:
    - VPCStackName="DevVPC" or "ProdVPC"
    - Environment="Dev" or "Prod"
-   - HostedZoneName=""   # Add your Hosted Zone Name inside the quotes! Example: "myhostedzone.me.uk"
+   - HostedZoneName="" # Add your Hosted Zone Name in quotes! Example: "hostedzone.me.uk"
 
 3. Check VPC Stack. It must be up:
    - aws cloudformation describe-stacks --stack-name ${VPCStackName}  

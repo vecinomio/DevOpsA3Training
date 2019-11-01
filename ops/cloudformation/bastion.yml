@@ -91,10 +91,12 @@
         Encrypted: No
         Size: !Ref VolumeSize
         Tags:
-          - Key: "Name"
-            Value: "BastionEBS"
+          - Key: 'Name'
+            Value: 'BastionEBS'
           - Key: 'Environment'
             Value: !Ref Environment
+          - Key: 'BackupByLifecycle'
+            Value: 'daily'
         VolumeType: gp2
 
     DLMRole:
@@ -103,22 +105,26 @@
         Description: 'Role for Lifecicle. Needs to creating and managing Snapshots
                       of the Bation Persistent Volume.'
         AssumeRolePolicyDocument:
+          Version: '2012-10-17'
           Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service:
-                - 'ec2.amazonaws.com'
-            Action:
-                - 'sts:AssumeRole'
+            - Effect: 'Allow'
+              Principal:
+                Service:
+                  - 'ec2.amazonaws.com'
+              Action:
+                  - 'sts:AssumeRole'
         Path: '/'
         Policies:
           - PolicyName: 'LifecicleForBastionEbs'
             PolicyDocument:
+              Version: '2012-10-17'
               Statement:
                 - Effect: 'Allow'
                   Action:
                     - ec2:CreateSnapshot
+                    - ec2:CreateSnapshots
                     - ec2:DeleteSnapshot
+                    - ec2:DescribeInstances
                     - ec2:DescribeSnapshots
                     - ec2:DescribeSnapshotAttribute
                     - ec2:DescribeVolumes
@@ -143,7 +149,7 @@
             - 'VOLUME'
           TargetTags:
             - Key: 'BackupByLifecycle'
-              Value: 'Daily'
+              Value: 'daily'
           Schedules:
             -
               Name: 'Daily Snapshots'
@@ -151,10 +157,10 @@
                 - Key: 'type'
                   Value: 'DailySnapshot'
               CreateRule:
-                Interval: 24
+                Interval: 2
                 IntervalUnit: 'HOURS'
                 Times:
-                  - '09:00'
+                  - '13:30'
               RetainRule:
                 Count: 3
               CopyTags: true
