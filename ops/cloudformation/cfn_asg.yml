@@ -3,6 +3,8 @@
 #                           --template-file ops/cloudformation/cfn_asg.yml     \
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
+#                             PuppetScriptVersion=<version>                    \
+#                             WebAppVersion=<version>                          \
 #                           --profile <profile>
 ---
 AWSTemplateFormatVersion: "2010-09-09"
@@ -24,6 +26,21 @@ Parameters:
     Default: t2.micro
     AllowedValues: [ t2.micro, t2.small, t2.medium ]
     ConstraintDescription: Must be a valid EC2 instance type.
+  WebASGCapacity:
+    Description: The number of ec2 instances will be runned into ASG
+    Type: String
+    Default: "2"
+    ConstraintDescription: Must be positive integer or zero
+  S3Path:
+    Type: String
+    Description: The S3 path
+    Default: devopsa3
+  WebAppVersion:
+    Type: String
+    Description: Web application version
+  PuppetScriptVersion:
+    Type: String
+    Description: Bootstrap script version
 
 Mappings:
   RegionMap:
@@ -53,9 +70,13 @@ Resources:
     Type: "AWS::AutoScaling::LaunchConfiguration"
     Properties:
       UserData:
-        Fn::Base64: !Sub |
+        Fn::Base64: !Sub
+        - |
           #!/bin/bash -x
-          echo -------------------------START-----------------------------
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
           PATH=$PATH:/opt/aws/bin/
           function retryCommand() {
               local ATTEMPTS="$1"
@@ -66,6 +87,23 @@ Resources:
                   eval $FUNCTION && echo $? && break || echo $?
               done
           }
+          function retryPuppetCommand() {
+              local ATTEMPTS="$1"
+              local SLEEP="$2"
+              local COMMAND="$3"
+              for i in $(seq 1 $ATTEMPTS); do
+                  [ $i == 1 ] || sleep $SLEEP
+                  $COMMAND
+                  if [ $? -eq 2 ]
+                  then
+                    echo "Success"
+                    break
+                  else
+                    echo $?
+                  fi
+              done
+          }
+          # retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/web/web_application-${ver}.tar" .'
           retryCommand 5 10 "yum -y update"
           retryCommand 5 10 "yum -y install tomcat"
           retryCommand 5 10 "yum -y install tomcat-webapps tomcat-admin-webapps tomcat-docs-webapp tomcat-javadoc"
@@ -82,7 +120,18 @@ Resources:
           sleep 10s
           curl -sS http://localhost:8080/index.jsp
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
-          echo -------------------------END-----------------------------
+          echo "SECTION #2 - INSTALL PUPPET AGENT"
+          rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
+          retryCommand 5 10 "yum -y update"
+          retryCommand 5 10 'yum install -y puppet-agent'
+          export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin
+          retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/web/puppet-${pupver}.tar" .'
+          tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
+          retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp' && echo "Finished puppet"
+          sleep 30
+          systemctl status puppet
+        - ver: !Ref WebAppVersion
+          pupver: !Ref PuppetScriptVersion
       AssociatePublicIpAddress: "false"
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       InstanceType: !Ref InstanceType
@@ -96,7 +145,7 @@ Resources:
       AutoScalingGroupName: webAppASG
       MinSize: "1"
       MaxSize: "3"
-      DesiredCapacity: "2"
+      DesiredCapacity: !Ref WebASGCapacity
       TargetGroupARNs:
         - Fn::ImportValue: "alb-tgWeb-ARN"
       HealthCheckGracePeriod: 300
@@ -110,5 +159,5 @@ Resources:
           PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
-        Count: 2
+        Count: !Ref WebASGCapacity
         Timeout: "PT20M"
