@@ -20,14 +20,9 @@
       AllowedValues: [ DevVPC, ProdVPC ]
     KeyName:
       Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
-      Type: AWS::EC2::KeyPair::KeyName
-      Default: imaki_NVirginia
+      Type: 'AWS::EC2::KeyPair::KeyName'
+      Default: devopsa3
       ConstraintDescription: must be the name of an existing EC2 KeyPair.
-    SSHLocation:
-      Description: The IP address range that can be used to SSH to the EC2 instances
-      Type: String
-      Default: 0.0.0.0/0
-      ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
     InstanceType:
       Type: String
       Description: Type of EC2 instance.
@@ -45,6 +40,10 @@
       Type: Number
       Description: Desired number of instances in ASG.
       Default: 1
+    Environment:
+      Type: String
+      Description: Dev or Prod
+      Default: Dev
 
   Mappings:
     RegionMap:
@@ -64,7 +63,12 @@
           - IpProtocol: tcp
             FromPort: '22'
             ToPort: '22'
-            CidrIp: !Ref SSHLocation
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: 'Name'
+            Value: 'bastionSG'
+          - Key: 'Environment'
+            Value: !Ref Environment
 
     BastionEIP:
       Type: AWS::EC2::EIP
@@ -83,14 +87,14 @@
     BastionVolume:
       Type: AWS::EC2::Volume
       Properties:
-        AvailabilityZone: !Sub '${AWS::Region}a'
+        AvailabilityZone: !Sub "${AWS::Region}a"
         Encrypted: No
         Size: !Ref VolumeSize
         Tags:
-          - Key: 'Name'
-            Value: 'BastionEBS'
-          - Key: 'BackupByLifecycle'
-            Value: 'Daily'
+          - Key: "Name"
+            Value: "BastionEBS"
+          - Key: 'Environment'
+            Value: !Ref Environment
         VolumeType: gp2
 
     DLMRole:
@@ -246,8 +250,7 @@
       Type: AWS::AutoScaling::AutoScalingGroup
       Properties:
         VPCZoneIdentifier:
-          - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet0'
-          - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet1'
+          - Fn::ImportValue: !Sub "${VPCStackName}-PublicSubnet0"
         LaunchConfigurationName: !Ref LaunchConfig
         MinSize: 1
         MaxSize: 2
@@ -255,4 +258,7 @@
         Tags:
           - Key: 'Name'
             Value: 'bastion-ASG'
+            PropagateAtLaunch: true
+          - Key: 'Environment'
+            Value: !Ref Environment
             PropagateAtLaunch: true
