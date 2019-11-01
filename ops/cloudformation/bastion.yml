@@ -160,7 +160,7 @@
                 Interval: 2
                 IntervalUnit: 'HOURS'
                 Times:
-                  - '13:30'
+                  - '14:10'
               RetainRule:
                 Count: 3
               CopyTags: true
