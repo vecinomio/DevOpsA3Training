@@ -12,7 +12,9 @@ $install_path = "/var/lib/tomcat/webapps/ROOT/${dirname}"
       ensure => present,
     }
 
-    file { ['/var/lib/tomcat/webapps/ROOT/',
+    file { ['/var/lib/tomcat/',
+            '/var/lib/tomcat/webapps/',
+            '/var/lib/tomcat/webapps/ROOT/',
             $install_path]:
       ensure => directory,
       recurse => true,
