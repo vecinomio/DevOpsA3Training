@@ -3,6 +3,7 @@
 #                           --template-file ops/cloudformation/bastion.yml  \
 #                           --parameter-overrides                           \
 #                             VPCStackName=DevVPC | ProdVPC                 \
+#                             Environment=Dev | Prod                        \
 #                             HostedZoneName=your.hosted.zone.name          \
 #                           --capabilities CAPABILITY_NAMED_IAM             \
 #                           --tags Key1=Value1 Key2=Value2                  \
@@ -43,7 +44,6 @@
     Environment:
       Type: String
       Description: Dev or Prod
-      Default: Dev
 
   Mappings:
     RegionMap:
@@ -154,7 +154,7 @@
                 Interval: 24
                 IntervalUnit: 'HOURS'
                 Times:
-                  - '06:35'
+                  - '09:00'
               RetainRule:
                 Count: 3
               CopyTags: true
