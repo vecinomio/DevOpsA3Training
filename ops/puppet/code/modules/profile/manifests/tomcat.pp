@@ -6,6 +6,7 @@ class profile::tomcat {
 
     service { 'tomcat':
       ensure => running,
+      require => Exec['amazon-linux-extras install -y tomcat8.5'],
     }
 
 }

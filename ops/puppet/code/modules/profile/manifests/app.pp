@@ -12,11 +12,13 @@ $install_path = "/var/lib/tomcat/webapps/ROOT/${dirname}"
       ensure => present,
     }
 
-    file { $install_path:
+    file { ['/var/lib/tomcat/webapps/ROOT/',
+            $install_path]:
       ensure => directory,
-      owner  => 'tomcat',
+      recurse => true,
+      owner  => 'root',
       group  => 'tomcat',
-      mode   => '0755',
+      mode   => '0775',
     }
 
     archive { $filename:
@@ -28,7 +30,7 @@ $install_path = "/var/lib/tomcat/webapps/ROOT/${dirname}"
       cleanup       => true,
       user          => 'tomcat',
       group         => 'tomcat',
-      require       => File[$install_path],
+      require       => File["$install_path"],
     }
 
 }
