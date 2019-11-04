@@ -21,6 +21,7 @@ $install_path = "/var/lib/tomcat/webapps/ROOT/${dirname}"
       owner  => 'root',
       group  => 'tomcat',
       mode   => '0775',
+      require => Exec['amazon-linux-extras install -y tomcat8.5'],
     }
 
     archive { $filename:
