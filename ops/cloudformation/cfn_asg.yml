@@ -68,6 +68,14 @@ Resources:
         - Key: "Name"
           Value: "webAppSG"
 
+  webAppRoleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "webappprofile"
+      Path: "/"
+      Roles:
+        - aveliS3reader
+
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
     Properties:
@@ -110,8 +118,9 @@ Resources:
           retryCommand 5 10 "yum -y update"
           retryCommand 5 10 'yum install -y puppet-agent'
           export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
-          # retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
-          retryCommand 5 10 'wget https://devopsa3-simple-java-app.s3.amazonaws.com/puppet-${pupver}.tar'
+          echo AAAAAAAAAABBBBBBBBBBBBAAAAAAAAAAAAAAAAAAA READ FROM S3 BBBBBBBBBAAAAAAAAAAAAAAAAAAAAAA
+          retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
+          # retryCommand 5 10 'wget https://devopsa3-simple-java-app.s3.amazonaws.com/puppet-${pupver}.tar'
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
           systemctl start puppet
           systemctl enable puppet
@@ -127,6 +136,7 @@ Resources:
         - ver: !Ref WebAppVersion
           pupver: !Ref PuppetScriptVersion
       AssociatePublicIpAddress: "false"
+      IamInstanceProfile: !Ref webAppRoleProfile
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
