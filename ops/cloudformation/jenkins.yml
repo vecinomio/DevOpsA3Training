@@ -2,6 +2,10 @@
 #
 # aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
+
+Description: "Creates: Jenkins Security Group, Jenkins Role, Jenkins Profile,
+              Jenkins LaunchConfig and Jenkins AutoScalingGroup."
+
 Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
@@ -177,10 +181,9 @@ Resources:
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
-            retryCommand 5 10 'gem install r10k'
-            retryCommand 5 10 'r10k puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
-            retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
+            retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp' && echo "Finished puppet"
             sleep 30
+            cat /var/lib/jenkins/secrets/initialAdminPassword
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion

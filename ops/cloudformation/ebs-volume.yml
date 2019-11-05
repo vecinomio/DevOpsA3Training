@@ -3,6 +3,9 @@
 # aws cloudformation deploy --template-file ebs-volume.yml --stack-name jenkins-ebs --capabilities CAPABILITY_IAM
 #
 AWSTemplateFormatVersion: '2010-09-09'
+
+Description: "Creates: EBS volume, DLM Role for Lifecycle and Basic Lifecycle Policy."
+
 Parameters:
   Size:
     Type: Number
