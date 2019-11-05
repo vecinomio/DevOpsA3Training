@@ -16,17 +16,15 @@ This instructions provide how to create a Bastion Stack in custom VPC.
 1. Clone repository from github:
    - git clone https://github.com/IYermakov/DevOpsA3Training.git
 
-3. Set variables:
+2. Set variable and Check VPC Stack, it must be up:
    - VPCStackName="DevVPC" or "ProdVPC"
-   - Environment="Dev" or "Prod"
-   - HostedZoneName="" # Add your Hosted Zone Name in quotes! Example: "hostedzone.me.uk"
+   - aws cloudformation describe-stacks --stack-name ${VPCStackName}
 
-3. Check VPC Stack. It must be up:
-   - aws cloudformation describe-stacks --stack-name ${VPCStackName}  
-
-4. Validate Bastion template and Create Bastion Stack:
+3. Validate Bastion template, Set variables and Create Bastion Stack:
    - aws cloudformation validate-template --template-body \
      file://ops/cloudformation/bastion.yml
+   - Environment="Dev" or "Prod"
+   - HostedZoneName="" # Add your Hosted Zone Name in quotes! Example: "hostedzone.me.uk"
    - aws cloudformation deploy --stack-name bastion \
                                --template-file ops/cloudformation/bastion.yml \
                                --parameter-overrides VPCStackName=${VPCStackName} \
