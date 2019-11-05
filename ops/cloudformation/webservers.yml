@@ -30,6 +30,9 @@ Parameters:
     Type: String
     Default: "2"
     ConstraintDescription: Must be positive integer or zero
+  HostedZoneName:
+    Type: String
+    Description: Project hosted zone name.
   S3Path:
     Type: String
     Description: The S3 path
@@ -92,6 +95,15 @@ Resources:
         Value: 8080
       # - Key: 'Environment'
       #   Value: !Ref Environment
+
+  appRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub 'app.${HostedZoneName}.'
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
