@@ -71,10 +71,67 @@ Resources:
   webAppRoleProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: "webappprofile"
+      InstanceProfileName: "webAppProfile"
       Path: "/"
       Roles:
-        - aveliS3reader
+        - !Ref webAppRole
+
+  webAppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: webAppPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - iam:CreateInstanceProfile
+                  - iam:CreateRole
+                  - iam:DeleteRolePolicy
+                  - iam:DeleteRole
+                  - iam:PutRolePolicy
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:AddRoleToInstanceProfile
+                  - iam:PassRole
+                  - autoscaling:CreateLaunchConfiguration
+                  - autoscaling:DescribeLaunchConfigurations
+                  - autoscaling:CreateAutoScalingGroup
+                  - autoscaling:UpdateAutoScalingGroup
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeScalingActivities
+                  - autoscaling:PutScalingPolicy
+                  - autoscaling:DeletePolicy
+                  - autoscaling:DeleteAutoScalingGroup
+                  - autoscaling:DeleteLaunchConfiguration
+                  - ec2:DescribeTags
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeAddresses
+                  - ec2:DescribeKeyPairs
+                  - ec2:CreateVolume
+                  - ec2:CreateTags
+                  - ec2:AttachVolume
+                  - ec2:AssociateAddress
+                  - ec2:CreateSecurityGroup
+                  - ec2:DescribeSecurityGroups
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:DescribeAccountAttributes
+                  - ec2:DeleteSecurityGroup
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
