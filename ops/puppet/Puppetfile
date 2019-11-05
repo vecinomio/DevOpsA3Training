@@ -1,3 +1,4 @@
 forge 'https://forge.puppet.com'
 
 mod 'puppet-archive', '4.3.0'
+mod 'puppetlabs-stdlib', '6.1.0'
