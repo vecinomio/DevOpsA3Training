@@ -11,26 +11,24 @@ This instructions provide how to create an ALB Stack in custom VPC.
   * All requests from HTTP redirecting to HTTPS.
 
 
-# To create Bastion Stack:
+# To create ALB Stack:
 
 1. Clone repository from github:
    - git clone https://github.com/IYermakov/DevOpsA3Training.git
 
-2. Set variables:
-  - VPCStackName="DevVPC" or "ProdVPC"
-  - Environment="Dev" or "Prod"
-  - HostedZoneName="" # Put your Hosted Zone Name in quotes. Example: "hostedzone.me.uk"
-  - SSLCertificateARN="" # Put your Certificate ARN in quotes.
-
-3. Check VPC Stack. It must be up:
+2. Set variable and Check VPC Stack, it must be up:
+   - VPCStackName="DevVPC" or "ProdVPC"
    - aws cloudformation describe-stacks --stack-name ${VPCStackName}
 
-4. Validate ALB template and Create ALB Stack:
-      - aws cloudformation validate-template --template-body \
-        file://ops/cloudformation/alb.yml
-      - aws cloudformation deploy --stack-name alb \
-                                  --template-file ops/cloudformation/alb.yml \
-                                  --parameter-overrides VPCStackName=${VPCStackName} \
-                                                        HostedZoneName=${HostedZoneName} \
-                                                        Environment=${Environment} \
-                                                        SSLCertificateARN=${SSLCertificateARN}
+3. Validate ALB template, Set variables and Create ALB Stack:
+   - aws cloudformation validate-template --template-body \
+     file://ops/cloudformation/alb.yml
+   - Environment="Dev" or "Prod"
+   - HostedZoneName="" # Put your Hosted Zone Name in quotes. Example: "hostedzone.me.uk"
+   - SSLCertificateARN="" # Put your Certificate ARN in quotes.
+   - aws cloudformation deploy --stack-name alb \
+                               --template-file ops/cloudformation/alb.yml \
+                               --parameter-overrides VPCStackName=${VPCStackName} \
+                                                     HostedZoneName=${HostedZoneName} \
+                                                     Environment=${Environment} \
+                                                     SSLCertificateARN=${SSLCertificateARN}
