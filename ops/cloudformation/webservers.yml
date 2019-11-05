@@ -1,0 +1,182 @@
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name webservers                            \
+#                           --template-file ops/cloudformation/webservwers.yml \
+#                           --parameter-overrides                              \
+#                             VPCStackName=DevVPC | ProdVPC                    \
+#                             PuppetScriptVersion=<version>                    \
+#                             WebAppVersion=<version>                          \
+#                           --profile <profile>
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "ASG for private subnet."
+
+Parameters:
+  VPCStackName:
+    Type: String
+    AllowedValues: [ DevVPC, ProdVPC ]
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Default: devopsa3
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  InstanceType:
+    Type: String
+    Description: Type of EC2 instance.
+    Default: t2.micro
+    ConstraintDescription: Must be a valid EC2 instance type.
+  WebserverCapacity:
+    Description: The number of ec2 instances will be runned into ASG
+    Type: String
+    Default: "2"
+    ConstraintDescription: Must be positive integer or zero
+  S3Path:
+    Type: String
+    Description: The S3 path
+    Default: devopsa3
+  WebAppVersion:
+    Type: String
+    Description: Web application version
+  PuppetScriptVersion:
+    Type: String
+    Description: Bootstrap script version
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
+    us-west-1:
+      AMI: ami-0245d318c6788de52 # Amazon Linux 2
+
+Resources:
+  webserversSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP, HTTPS, SSH access
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '8080'
+          ToPort: '8080'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: "Name"
+          Value: "webserversSG"
+
+  WebserversTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: '/'
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: '200-299'
+      Name: tgWebservers
+      Port: 8080
+      Protocol: HTTP
+      TargetType: instance
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+      Tags:
+      - Key: 'Name'
+        Value: 'tgWebservers'
+      - Key: 'Port'
+        Value: 8080
+      # - Key: 'Environment'
+      #   Value: !Ref Environment
+
+  LaunchConfig:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      UserData:
+        Fn::Base64: !Sub
+        - |
+          #!/bin/bash -x
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          PATH=$PATH:/opt/aws/bin/
+          function retryCommand() {
+              local ATTEMPTS="$1"
+              local SLEEP="$2"
+              local FUNCTION="$3"
+              for i in $(seq 1 $ATTEMPTS); do
+                  [ $i == 1 ] || sleep $SLEEP
+                  eval $FUNCTION && echo $? && break || echo $?
+              done
+          }
+          function retryPuppetCommand() {
+              local ATTEMPTS="$1"
+              local SLEEP="$2"
+              local COMMAND="$3"
+              for i in $(seq 1 $ATTEMPTS); do
+                  [ $i == 1 ] || sleep $SLEEP
+                  $COMMAND
+                  if [ $? -eq 2 ]
+                  then
+                    echo "Success"
+                    break
+                  else
+                    echo $?
+                  fi
+              done
+          }
+          hostnamectl set-hostname webserver
+          retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
+          retryCommand 5 10 "yum -y update"
+          retryCommand 5 10 'yum install -y puppet-agent'
+          export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
+          # retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
+          retryCommand 5 10 'wget https://devopsa3-simple-java-app.s3.amazonaws.com/puppet-${pupver}.tar'
+          retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
+          systemctl start puppet
+          systemctl enable puppet
+          sleep 30
+          retryCommand 5 10 'gem install r10k'
+          retryCommand 5 10 'r10k puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
+          retryCommand 5 10 'puppet module install puppet-archive --version 4.4.0'
+          retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp' && echo "Finished puppet"
+          sleep 30
+          systemctl status puppet
+          curl -sS http://localhost:8080/index.jsp
+          cfn-signal -e $? --stack ${AWS::StackName} --resource webserversASG --region ${AWS::Region}
+        - ver: !Ref WebAppVersion
+          pupver: !Ref PuppetScriptVersion
+      AssociatePublicIpAddress: "false"
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref webserversSecurityGroup
+
+  webserversASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: webserversASG
+      MinSize: "1"
+      MaxSize: "3"
+      DesiredCapacity: !Ref WebserverCapacity
+      TargetGroupARNs:
+        - !Ref WebserversTargetGroup
+      HealthCheckGracePeriod: 300
+      LaunchConfigurationName: !Ref LaunchConfig
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
+      Tags:
+        - Key: "Name"
+          Value: "webserverASG"
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref WebserverCapacity
+        Timeout: "PT20M"
