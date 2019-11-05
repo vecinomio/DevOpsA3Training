@@ -114,12 +114,12 @@ Resources:
           retryCommand 5 10 "yum -y update"
           retryCommand 5 10 'yum install -y puppet-agent'
           export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
-          retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
+          retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
           retryCommand 5 10 'gem install r10k'
-          retryCommand 5 10 'r10k puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
+          retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
           retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
-          sleep 20
+          sleep 10
           curl -sS http://localhost:8080/index.jsp
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - ver: !Ref WebAppVersion
