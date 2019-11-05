@@ -28,7 +28,7 @@ Parameters:
   WebASGCapacity:
     Description: The number of ec2 instances will be runned into ASG
     Type: String
-    Default: "2"
+    Default: "1"
     ConstraintDescription: Must be positive integer or zero
   S3Path:
     Type: String
@@ -116,8 +116,6 @@ Resources:
           export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
           retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
-          systemctl start puppet
-          systemctl enable puppet
           retryCommand 5 10 'gem install r10k'
           retryCommand 5 10 'r10k puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
           retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
