@@ -126,6 +126,7 @@ Resources:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:DescribeAccountAttributes
                   - ec2:DeleteSecurityGroup
+                  - ssm:UpdateInstanceInformation
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
@@ -148,10 +149,6 @@ Resources:
         Fn::Base64: !Sub
           - |
             #!/bin/bash
-            set -o errexit
-            set -o nounset
-            set -o xtrace
-            set -o pipefail
             function retryCommand() {
                 local ATTEMPTS="$1"
                 local SLEEP="$2"
