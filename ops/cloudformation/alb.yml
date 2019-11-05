@@ -198,6 +198,12 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-DNSName'
+    HttpsListenerARN:
+      Description: 'The ARN of the HTTPS Listener'
+      Value: !Ref HttpsListener
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-HttpsListener-ARN'
     tgWebARN:
       Description: 'ARN of the Target Group Web'
       Value: !Ref WebTargetGroup
