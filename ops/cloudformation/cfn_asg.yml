@@ -78,6 +78,7 @@ Resources:
 
   webAppRole:
     Type: AWS::IAM::Role
+    Description: "Service account custom role for using additional AWS resources"
     Properties:
       Path: "/"
       AssumeRolePolicyDocument:
