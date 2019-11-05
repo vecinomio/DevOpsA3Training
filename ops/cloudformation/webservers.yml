@@ -33,6 +33,10 @@ Parameters:
   HostedZoneName:
     Type: String
     Description: Project hosted zone name.
+  Environment:
+    Type: String
+    Description: Dev or Prod
+    AllowedValues: [ Dev, Prod ]
   S3Path:
     Type: String
     Description: The S3 path
@@ -93,8 +97,8 @@ Resources:
         Value: 'tgWebservers'
       - Key: 'Port'
         Value: 8080
-      # - Key: 'Environment'
-      #   Value: !Ref Environment
+      - Key: 'Environment'
+        Value: !Ref Environment
 
   appRecordSet:
     Type: AWS::Route53::RecordSet
@@ -103,7 +107,22 @@ Resources:
       Name: !Sub 'app.${HostedZoneName}.'
       Type: CNAME
       TTL: '300'
-      ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
+      ResourceRecords:
+        - Fn::ImportValue: alb-ALB-DNSName
+
+  appListenerRule:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref WebserversTargetGroup
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values:
+              - !Sub 'app.${HostedZoneName}'
+      ListenerArn: !Ref HttpsListener
+      Priority: 1
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
