@@ -121,8 +121,9 @@ Resources:
           HostHeaderConfig:
             Values:
               - !Sub 'app.${HostedZoneName}'
-      ListenerArn: !Ref HttpsListener
-      Priority: 1
+      ListenerArn:
+        - Fn::ImportValue: alb-HttpsListener-ARN
+      Priority: 2
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
