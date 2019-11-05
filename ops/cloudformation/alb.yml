@@ -192,6 +192,12 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-ARN'
+    AppLoadBalancerDNSName:
+      Description: 'DNS name of the ALB'
+      Value: !GetAtt AppLoadBalancer.DNSName
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-ALB-DNSName'
     tgWebARN:
       Description: 'ARN of the Target Group Web'
       Value: !Ref WebTargetGroup
