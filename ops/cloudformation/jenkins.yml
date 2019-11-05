@@ -2,6 +2,10 @@
 #
 # aws cloudformation deploy --template-file jenkins.yml --stack-name jenkins --parameter-overrides VPCStackName=DevVPC MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
+
+Description: "Creates: Jenkins Security Group, Jenkins Role, Jenkins Profile,
+              Jenkins LaunchConfig and Jenkins AutoScalingGroup."
+
 Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
