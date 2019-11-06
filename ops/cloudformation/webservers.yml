@@ -41,9 +41,6 @@ Parameters:
     Type: String
     Description: The S3 path
     Default: devopsa3
-  WebAppVersion:
-    Type: String
-    Description: Web application version
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
@@ -74,6 +71,37 @@ Resources:
       Tags:
         - Key: "Name"
           Value: "webserversSG"
+
+  webserversRole:
+    Type: AWS::IAM::Role
+    Description: "Service account custom role for using additional AWS resources"
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: webserversPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+
+  webserversRoleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "webserversProfile"
+      Path: "/"
+      Roles:
+        - !Ref webserversRole
 
   WebserversTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -130,11 +158,7 @@ Resources:
       UserData:
         Fn::Base64: !Sub
         - |
-          #!/bin/bash -x
-          set -o errexit
-          set -o nounset
-          set -o xtrace
-          set -o pipefail
+          #!/bin/bash
           PATH=$PATH:/opt/aws/bin/
           function retryCommand() {
               local ATTEMPTS="$1"
@@ -143,22 +167,6 @@ Resources:
               for i in $(seq 1 $ATTEMPTS); do
                   [ $i == 1 ] || sleep $SLEEP
                   eval $FUNCTION && echo $? && break || echo $?
-              done
-          }
-          function retryPuppetCommand() {
-              local ATTEMPTS="$1"
-              local SLEEP="$2"
-              local COMMAND="$3"
-              for i in $(seq 1 $ATTEMPTS); do
-                  [ $i == 1 ] || sleep $SLEEP
-                  $COMMAND
-                  if [ $? -eq 2 ]
-                  then
-                    echo "Success"
-                    break
-                  else
-                    echo $?
-                  fi
               done
           }
           hostnamectl set-hostname webserver
@@ -170,12 +178,15 @@ Resources:
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
           retryCommand 5 10 'gem install r10k'
           retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
-          retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
+          retryCommand 5 10 '(puppet apply --detailed-exitcodes /etc/puppetlabs/code/environments/production/manifests/site.pp &&
+                                exit_code=$?) || exit_code=$?
+                                [ $exit_code == 2 -o $exit_code == 0 ] && return 0
+                                return 1'
           retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webserversASG --region ${AWS::Region}
-        - ver: !Ref WebAppVersion
-          pupver: !Ref PuppetScriptVersion
+        - pupver: !Ref PuppetScriptVersion
       AssociatePublicIpAddress: "false"
+      IamInstanceProfile: !Ref webserversRoleProfile
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
