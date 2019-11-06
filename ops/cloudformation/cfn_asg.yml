@@ -63,12 +63,12 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: "Name"
-          Value: "webAppSG"
+          Value: !Sub "${AWS::StackName}-SG"
 
   webAppRoleProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: "webAppProfile"
+      InstanceProfileName: !Sub "${AWS::StackName}Profile"
       Path: "/"
       Roles:
         - !Ref webAppRole
@@ -87,7 +87,7 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: webAppPolicy
+        - PolicyName: !Sub "${AWS::StackName}Policy"
           PolicyDocument:
             Statement:
               - Effect: Allow
@@ -151,7 +151,7 @@ Resources:
         - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
       Tags:
         - Key: "Name"
-          Value: "webAppASG"
+          Value: !Sub "${AWS::StackName}-ASG"
           PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
