@@ -1,0 +1,160 @@
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name webAppASG                             \
+#                           --template-file ops/cloudformation/cfn_asg.yml     \
+#                           --parameter-overrides                              \
+#                             VPCStackName=DevVPC | ProdVPC                    \
+#                             PuppetScriptVersion=<version>                    \
+#                             WebAppVersion=<version>                          \
+#                           --profile <profile>
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "ASG for private subnet."
+
+Parameters:
+  VPCStackName:
+    Type: String
+    AllowedValues: [ DevVPC, ProdVPC ]
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Default: devopsa3
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  InstanceType:
+    Type: String
+    Description: Type of EC2 instance.
+    Default: t2.micro
+    ConstraintDescription: Must be a valid EC2 instance type.
+  WebASGCapacity:
+    Description: The number of ec2 instances will be runned into ASG
+    Type: String
+    Default: "2"
+    ConstraintDescription: Must be positive integer or zero
+  S3Path:
+    Type: String
+    Description: The S3 path
+    Default: devopsa3
+  PuppetScriptVersion:
+    Type: String
+    Description: Bootstrap script version
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
+    us-west-1:
+      AMI: ami-0245d318c6788de52 # Amazon Linux 2
+
+Resources:
+  webAutoScalingSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP, HTTPS, SSH access
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '8080'
+          ToPort: '8080'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: "Name"
+          Value: "webAppSG"
+
+  webAppRoleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: "webAppProfile"
+      Path: "/"
+      Roles:
+        - !Ref webAppRole
+
+  webAppRole:
+    Type: AWS::IAM::Role
+    Description: "Service account custom role for using additional AWS resources"
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: webAppPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - s3:GetObject
+
+  LaunchConfig:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      UserData:
+        Fn::Base64: !Sub
+        - |
+          #!/bin/bash
+          PATH=$PATH:/opt/aws/bin/
+          function retryCommand() {
+              local ATTEMPTS="$1"
+              local SLEEP="$2"
+              local FUNCTION="$3"
+              for i in $(seq 1 $ATTEMPTS); do
+                  [ $i == 1 ] || sleep $SLEEP
+                  eval $FUNCTION && echo $? && break || echo $?
+              done
+          }
+          hostnamectl set-hostname webserver
+          retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
+          retryCommand 5 10 "yum -y update"
+          retryCommand 5 10 'yum install -y puppet-agent'
+          export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
+          retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
+          retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
+          retryCommand 5 10 'gem install r10k'
+          retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
+          retryCommand 5 10 '(puppet apply --detailed-exitcodes /etc/puppetlabs/code/environments/production/manifests/site.pp &&
+                                exit_code=$?) || exit_code=$?
+                                [ $exit_code == 2 -o $exit_code == 0 ] && return 0
+                                return 1'
+          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
+          cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
+        - pupver: !Ref PuppetScriptVersion
+      AssociatePublicIpAddress: "false"
+      IamInstanceProfile: !Ref webAppRoleProfile
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref webAutoScalingSecurityGroup
+
+  webAppASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: webAppASG
+      MinSize: "1"
+      MaxSize: "3"
+      DesiredCapacity: !Ref WebASGCapacity
+      TargetGroupARNs:
+        - Fn::ImportValue: "alb-tgWeb-ARN"
+      HealthCheckGracePeriod: 300
+      LaunchConfigurationName: !Ref LaunchConfig
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
+      Tags:
+        - Key: "Name"
+          Value: "webAppASG"
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref WebASGCapacity
+        Timeout: "PT20M"
