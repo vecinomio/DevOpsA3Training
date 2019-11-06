@@ -19,7 +19,9 @@ pipeline {
       }
     }
     stage("Email Notification"){
-      mail bcc: '', body: 'Stack was successfully deployed. ', cc: '', from: '', replyTo: '', subject: 'DevopsA3 pipeline job', to: 'vecinomio@gmail.com'
+      steps {
+        mail bcc: '', body: 'Stack was successfully deployed. ', cc: '', from: '', replyTo: '', subject: 'DevopsA3 pipeline job', to: 'vecinomio@gmail.com'
+      }
     }
   }
 }
