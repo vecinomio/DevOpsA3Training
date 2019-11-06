@@ -166,19 +166,12 @@ Resources:
           retryCommand 5 10 "yum -y update"
           retryCommand 5 10 'yum install -y puppet-agent'
           export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
-          # retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/jenkins/puppet-${pupver}.tar" .'
-          retryCommand 5 10 'wget https://devopsa3-simple-java-app.s3.amazonaws.com/puppet-${pupver}.tar'
+          retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
-          systemctl start puppet
-          systemctl enable puppet
-          sleep 30
           retryCommand 5 10 'gem install r10k'
-          retryCommand 5 10 'r10k puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
-          retryCommand 5 10 'puppet module install puppet-archive --version 4.4.0'
-          retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp' && echo "Finished puppet"
-          sleep 30
-          systemctl status puppet
-          curl -sS http://localhost:8080/index.jsp
+          retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
+          retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
+          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webserversASG --region ${AWS::Region}
         - ver: !Ref WebAppVersion
           pupver: !Ref PuppetScriptVersion
