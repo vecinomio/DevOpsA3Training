@@ -5,11 +5,12 @@ This instruction provides:
   - how to create a VPC Stack using CloudFormation.
   - how to create an ALB Stack in custom VPC.
   - how to create a Bastion Stack in custom VPC.
+  - how to create Jenkins and Jenkins-ebs stacks in custom VPC.
 
 ## Expected results:
 - Custom VPC with public and private subnets in 2 Availability Zones
   * All resources in subnets Public0 and Public1 has Internet access through Internet Gateway
-  * All resources in subnets Private0 and Private1 has Internet access through NAT Gateway.
+  * All resources in subnets Private0 and Private1 has Internet access through NAT Gateway
 
 - Application Load Balancer:
   * ALB has 2 Target Groups: "web" and "jenkins";
@@ -23,9 +24,13 @@ This instruction provides:
   * Bastion has DNS Record: bastion.<HostedZoneName>;
   * If Bastion-host falls, ASG will create new one and Persistent Storage will attach to it.
 
+- AutoScalingGroup with only one Jenkins-host instance:
+  * Jenkins has Persistent Storage: "/dev/sdh" mounted to "/var/lib/jenkins" directory;
+  * Jenkins has DNS Record: ci.<HostedZoneName>;
+  * If Jenkins-host falls, ASG will create new one and Persistent Storage will attach to it.
+
 
 # To create VPC Stack:
-
 1. Clone repository from github:
    - git clone https://github.com/IYermakov/DevOpsA3Training.git
 
@@ -39,7 +44,6 @@ This instruction provides:
 
 
 # To create ALB Stack:
-
 1. Check VPC Stack, it must be up:
    - aws cloudformation describe-stacks --stack-name ${VPCStackName}
 
@@ -52,7 +56,6 @@ This instruction provides:
 
 
 # To create Bastion Stack:
-
 1. Check VPC Stack, it must be up:
    - aws cloudformation describe-stacks --stack-name ${VPCStackName}
 
@@ -62,3 +65,19 @@ This instruction provides:
 3. Validate Bastion template and Create Bastion Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/bastion.yml
    - aws cloudformation deploy --stack-name bastion --template-file ops/cloudformation/bastion.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_NAMED_IAM
+
+
+# To create Jenkins Stack:
+1. Check VPC Stack. It must be up:
+   - aws cloudformation describe-stacks --stack-name ${VPCStackName}
+
+2. Check ALB Stack. It must be up:
+   - aws cloudformation describe-stacks --stack-name alb
+
+3. Validate ebs-volume template and Create jenkins-ebs Stack:
+   - aws cloudformation validate-template --template-body file://ops/cloudformation/ebs-volume.yml
+   - aws cloudformation deploy --stack-name jenkins-ebs --template-file ops/cloudformation/ebs-volume.yml --parameter-overrides VPCStackName=${VPCStackName}
+
+4. Validate Jenkins template and Create Jenkins Stack:
+   - aws cloudformation validate-template --template-body file://ops/cloudformation/jenkins.yml
+   - aws cloudformation deploy --stack-name jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
