@@ -97,42 +97,6 @@ Resources:
                 Resource: "*"
                 Action:
                   - s3:GetObject
-                  - s3:PutObject
-                  - cloudformation:CreateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                  - iam:CreateInstanceProfile
-                  - iam:CreateRole
-                  - iam:DeleteRolePolicy
-                  - iam:DeleteRole
-                  - iam:PutRolePolicy
-                  - iam:RemoveRoleFromInstanceProfile
-                  - iam:AddRoleToInstanceProfile
-                  - iam:PassRole
-                  - autoscaling:CreateLaunchConfiguration
-                  - autoscaling:DescribeLaunchConfigurations
-                  - autoscaling:CreateAutoScalingGroup
-                  - autoscaling:UpdateAutoScalingGroup
-                  - autoscaling:DescribeAutoScalingGroups
-                  - autoscaling:DescribeScalingActivities
-                  - autoscaling:PutScalingPolicy
-                  - autoscaling:DeletePolicy
-                  - autoscaling:DeleteAutoScalingGroup
-                  - autoscaling:DeleteLaunchConfiguration
-                  - ec2:DescribeTags
-                  - ec2:DescribeSnapshots
-                  - ec2:DescribeVolumes
-                  - ec2:DescribeAddresses
-                  - ec2:DescribeKeyPairs
-                  - ec2:CreateVolume
-                  - ec2:CreateTags
-                  - ec2:AttachVolume
-                  - ec2:AssociateAddress
-                  - ec2:CreateSecurityGroup
-                  - ec2:DescribeSecurityGroups
-                  - ec2:AuthorizeSecurityGroupIngress
-                  - ec2:DescribeAccountAttributes
-                  - ec2:DeleteSecurityGroup
 
   LaunchConfig:
     Type: "AWS::AutoScaling::LaunchConfiguration"
@@ -151,22 +115,6 @@ Resources:
                   eval $FUNCTION && echo $? && break || echo $?
               done
           }
-          function retryPuppetCommand() {
-              local ATTEMPTS="$1"
-              local SLEEP="$2"
-              local COMMAND="$3"
-              for i in $(seq 1 $ATTEMPTS); do
-                  [ $i == 1 ] || sleep $SLEEP
-                  $COMMAND
-                  if [ $? -eq 2 ]
-                  then
-                    echo "Success"
-                    break
-                  else
-                    echo $?
-                  fi
-              done
-          }
           hostnamectl set-hostname webserver
           retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
           retryCommand 5 10 "yum -y update"
@@ -176,7 +124,10 @@ Resources:
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
           retryCommand 5 10 'gem install r10k'
           retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
-          retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
+          retryCommand 5 10 '(puppet apply --detailed-exitcodes /etc/puppetlabs/code/environments/production/manifests/site.pp &&
+                                exit_code=$?) || exit_code=$?
+                                [ $exit_code == 2 -o $exit_code == 0 ] && return 0
+                                return 1'
           retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - ver: !Ref WebAppVersion
