@@ -121,8 +121,7 @@ Resources:
           HostHeaderConfig:
             Values:
               - !Sub 'app.${HostedZoneName}'
-      ListenerArn:
-        - Fn::ImportValue: alb-HttpsListener-ARN
+      ListenerArn: Fn::ImportValue: alb-HttpsListener-ARN
       Priority: 2
 
   LaunchConfig:
