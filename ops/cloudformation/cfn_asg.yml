@@ -119,11 +119,9 @@ Resources:
           retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
           retryCommand 5 10 'gem install r10k'
-          retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
-          retryCommand 5 10 '(puppet apply --detailed-exitcodes /etc/puppetlabs/code/environments/production/manifests/site.pp &&
-                                exit_code=$?) || exit_code=$?
-                                [ $exit_code == 2 -o $exit_code == 0 ] && return 0
-                                return 1'
+          retryCommand 5 10 'r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
+          retryCommand 5 10 'puppet apply --detailed-exitcodes --test /etc/puppetlabs/code/environments/production/manifests/site.pp
+                             [ $? == 2 -o $? == 0 ] && return 0 || return 1'
           retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - pupver: !Ref PuppetScriptVersion
