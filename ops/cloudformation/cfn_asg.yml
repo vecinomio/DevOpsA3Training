@@ -177,8 +177,7 @@ Resources:
           retryCommand 5 10 'gem install r10k'
           retryCommand 5 10 '/opt/puppetlabs/puppet/bin/r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
           retryPuppetCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
-          sleep 10
-          curl -sS http://localhost:8080/index.jsp
+          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - ver: !Ref WebAppVersion
           pupver: !Ref PuppetScriptVersion
