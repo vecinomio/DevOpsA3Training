@@ -91,6 +91,9 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:PutObject
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
                   - cloudformation:CreateStack
                   - cloudformation:DeleteStack
                   - cloudformation:DescribeStacks
@@ -126,7 +129,12 @@ Resources:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:DescribeAccountAttributes
                   - ec2:DeleteSecurityGroup
-                  - ssm:UpdateInstanceInformation
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - elasticloadbalancing:CreateTargetGroup
+                  - elasticloadbalancing:AddTags
+                  - route53:ListHostedZones
+                  - route53:ChangeResourceRecordSets
+                  - route53:GetChange
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
@@ -149,6 +157,10 @@ Resources:
         Fn::Base64: !Sub
           - |
             #!/bin/bash
+            set -o errexit
+            set -o nounset
+            set -o xtrace
+            set -o pipefail
             function retryCommand() {
                 local ATTEMPTS="$1"
                 local SLEEP="$2"
@@ -177,7 +189,7 @@ Resources:
             retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
             rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
             yum -y update
-            retryCommand 5 10 'yum install -y puppet-agent'
+            retryCommand 5 10 'yum install -y puppet-agent git'
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
