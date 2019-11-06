@@ -109,12 +109,14 @@ Resources:
                   - autoscaling:DescribeLaunchConfigurations
                   - autoscaling:CreateAutoScalingGroup
                   - autoscaling:UpdateAutoScalingGroup
+                  - autoscaling:DescribeAutoScalingInstances
                   - autoscaling:DescribeAutoScalingGroups
                   - autoscaling:DescribeScalingActivities
                   - autoscaling:PutScalingPolicy
                   - autoscaling:DeletePolicy
                   - autoscaling:DeleteAutoScalingGroup
                   - autoscaling:DeleteLaunchConfiguration
+                  - ec2:DescribeInstances
                   - ec2:DescribeTags
                   - ec2:DescribeSnapshots
                   - ec2:DescribeVolumes
@@ -131,7 +133,11 @@ Resources:
                   - ec2:DeleteSecurityGroup
                   - elasticloadbalancing:DescribeTargetGroups
                   - elasticloadbalancing:CreateTargetGroup
+                  - elasticloadbalancing:DescribeRules
+                  - elasticloadbalancing:CreateRule
                   - elasticloadbalancing:AddTags
+                  - elasticloadbalancing:DeleteRule
+                  - elasticloadbalancing:DeleteTargetGroup
                   - route53:ListHostedZones
                   - route53:ChangeResourceRecordSets
                   - route53:GetChange
