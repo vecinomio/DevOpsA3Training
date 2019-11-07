@@ -91,13 +91,18 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:PutObject
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
                   - cloudformation:CreateStack
                   - cloudformation:DeleteStack
                   - cloudformation:DescribeStacks
+                  - cloudformation:GetTemplateSummary
                   - iam:CreateInstanceProfile
                   - iam:CreateRole
                   - iam:DeleteRolePolicy
                   - iam:DeleteRole
+                  - iam:GetInstanceProfile
                   - iam:PutRolePolicy
                   - iam:RemoveRoleFromInstanceProfile
                   - iam:AddRoleToInstanceProfile
@@ -106,12 +111,14 @@ Resources:
                   - autoscaling:DescribeLaunchConfigurations
                   - autoscaling:CreateAutoScalingGroup
                   - autoscaling:UpdateAutoScalingGroup
+                  - autoscaling:DescribeAutoScalingInstances
                   - autoscaling:DescribeAutoScalingGroups
                   - autoscaling:DescribeScalingActivities
                   - autoscaling:PutScalingPolicy
                   - autoscaling:DeletePolicy
                   - autoscaling:DeleteAutoScalingGroup
                   - autoscaling:DeleteLaunchConfiguration
+                  - ec2:DescribeInstances
                   - ec2:DescribeTags
                   - ec2:DescribeSnapshots
                   - ec2:DescribeVolumes
@@ -126,7 +133,16 @@ Resources:
                   - ec2:AuthorizeSecurityGroupIngress
                   - ec2:DescribeAccountAttributes
                   - ec2:DeleteSecurityGroup
-                  - ssm:UpdateInstanceInformation
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - elasticloadbalancing:CreateTargetGroup
+                  - elasticloadbalancing:DescribeRules
+                  - elasticloadbalancing:CreateRule
+                  - elasticloadbalancing:AddTags
+                  - elasticloadbalancing:DeleteRule
+                  - elasticloadbalancing:DeleteTargetGroup
+                  - route53:ListHostedZones
+                  - route53:ChangeResourceRecordSets
+                  - route53:GetChange
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
@@ -168,6 +184,7 @@ Resources:
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
             retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
             sleep 30
+            cat /var/lib/jenkins/secrets/initialAdminPassword
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion

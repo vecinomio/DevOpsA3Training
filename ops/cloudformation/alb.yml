@@ -192,6 +192,18 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-ARN'
+    AppLoadBalancerDNSName:
+      Description: 'The original DNS Name of the ALB'
+      Value: !GetAtt AppLoadBalancer.DNSName
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-ALB-DNSName'
+    AppLoadBalancerListenerARN:
+      Description: 'The ARN of the ALB HTTPS Listener'
+      Value: !Ref HttpsListener
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-HttpsListener-ARN'
     tgWebARN:
       Description: 'ARN of the Target Group Web'
       Value: !Ref WebTargetGroup
