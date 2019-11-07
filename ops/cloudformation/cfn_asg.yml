@@ -134,6 +134,21 @@ Resources:
       SecurityGroups:
         - !Ref webAutoScalingSecurityGroup
 
+  webAppAutoScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+#      MinAdjustmentMagnitude: 1
+      AutoScalingGroupName: !Ref webAppASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Sub
+          - ${albarn}/${albtgarn}
+          - albarn: !Select [1, !Split [":loadbalancer/",  !ImportValue "alb-ALB-ARN"]]
+            albtgarn: !Select [5, !Split [":", !ImportValue "alb-tgWeb-ARN"]]
+        TargetValue: 100.0
+
   webAppASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
