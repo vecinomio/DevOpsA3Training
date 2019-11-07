@@ -184,7 +184,7 @@ Resources:
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
             retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
             sleep 30
-            cat /var/lib/jenkins/secrets/initialAdminPassword
+            head /var/lib/jenkins/secrets/initialAdminPassword
             curl -sS http://localhost:8080
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion
