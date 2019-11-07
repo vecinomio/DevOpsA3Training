@@ -22,7 +22,7 @@ pipeline {
           }
           catch (err) {
             currentBuild.result = 'FAILURE'
-            mail bcc: '', body: '${err} Deploy failed. Check logs. ', cc: '', from: '', replyTo: '', subject: 'Deploy FAILED', to: 'vecinomio@gmail.com'
+            mail bcc: '', body: '${err}', cc: '', from: '', replyTo: '', subject: 'Deploy FAILED', to: 'vecinomio@gmail.com'
           }
         echo "result is: ${currentBuild.currentResult}"
         }
