@@ -19,7 +19,6 @@ pipeline {
             sh 'aws cloudformation deploy --stack-name webservers --template-file ops/cloudformation/webservers.yml --parameter-overrides VPCStackName=DevVPC PuppetScriptVersion=0.0.1 HostedZoneName=devopsa3.me.uk Environment=Dev --capabilities CAPABILITY_NAMED_IAM --region us-east-1'
             currentBuild.result = 'SUCCESS'
             emailext body: 'Stack was successfully deployed.', subject: 'Deploy Successful', to: 'vecinomio@gmail.com'
-            // mail bcc: '', body: 'Stack was successfully deployed. ', cc: '', from: '', replyTo: '', subject: 'Deploy Successful', to: 'vecinomio@gmail.com'
           }
           catch (err) {
             currentBuild.result = 'FAILURE'
