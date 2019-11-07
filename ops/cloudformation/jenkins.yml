@@ -164,17 +164,13 @@ Resources:
         Fn::Base64: !Sub
           - |
             #!/bin/bash
-            set -o errexit
-            set -o nounset
-            set -o xtrace
-            set -o pipefail
             function retryCommand() {
                 local ATTEMPTS="$1"
                 local SLEEP="$2"
                 local COMMAND="$3"
                 for i in $(seq 1 $ATTEMPTS); do
                     [ $i == 1 ] || sleep $SLEEP
-                    $COMMAND
+                    eval $COMMAND
                     [ $? == 2 -o $? == 0 ] && break
                 done
             }
