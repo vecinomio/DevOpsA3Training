@@ -1,5 +1,7 @@
 # DevOpsA3Training
+
 ![DevOps A3 Cloud Architecture V3 (1)](https://user-images.githubusercontent.com/23032052/68381416-59976580-015a-11ea-8b66-5352442be2c7.png)
+
 
 ## Description:
 This instruction provides:
@@ -8,6 +10,7 @@ This instruction provides:
   - how to create a Bastion Stack in custom VPC.
   - how to create Jenkins and Jenkins-ebs stacks in custom VPC.
   - how to create WebApp stack in custom VPC.
+
 
 ## Expected results:
 - Custom VPC with public and private subnets in 2 Availability Zones
@@ -65,7 +68,7 @@ This instruction provides:
 # To create Bastion Stack:
 1. Check VPC Stack, it must be up:
    - aws cloudformation describe-stacks --stack-name ${VPCStackName}
-
+   
 2. Validate Bastion template and Create Bastion Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/bastion.yml
    - aws cloudformation deploy --stack-name bastion --template-file ops/cloudformation/bastion.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_NAMED_IAM
@@ -97,4 +100,5 @@ This instruction provides:
 3. Validate cfn_asg template and Create webApp Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/cfn_asg.yml
    - aws cloudformation deploy --stack-name webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName=${VPCStackName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
+
 
