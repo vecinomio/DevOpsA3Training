@@ -108,8 +108,9 @@ Resources:
               local FUNCTION="$3"
               for i in $(seq 1 $ATTEMPTS); do
                   [ $i == 1 ] || sleep $SLEEP
-                  eval $FUNCTION && echo $? && break || echo $?
+                  eval $FUNCTION && echo $? && return 0 || echo $?
               done
+              return 1
           }
           hostnamectl set-hostname webserver
           retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
@@ -120,8 +121,8 @@ Resources:
           retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar'
           retryCommand 5 10 'gem install r10k'
           retryCommand 5 10 'r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
-          retryCommand 5 10 'puppet apply --detailed-exitcodes --test /etc/puppetlabs/code/environments/production/manifests/site.pp
-                             [ $? == 2 -o $? == 0 ] && return 0 || return 1'
+          retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
+                             [ $? == 2 -o $? == 0 ] && return 0'
           retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - pupver: !Ref PuppetScriptVersion
