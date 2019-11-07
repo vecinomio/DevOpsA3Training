@@ -193,13 +193,13 @@
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-ARN'
     AppLoadBalancerDNSName:
-      Description: 'DNS name of the ALB'
+      Description: 'The original DNS Name of the ALB'
       Value: !GetAtt AppLoadBalancer.DNSName
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-DNSName'
-    HttpsListenerARN:
-      Description: 'The ARN of the HTTPS Listener'
+    AppLoadBalancerListenerARN:
+      Description: 'The ARN of the ALB HTTPS Listener'
       Value: !Ref HttpsListener
       Export:
         Type: String
