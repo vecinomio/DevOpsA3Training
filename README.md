@@ -58,8 +58,10 @@ This instruction provides:
 
 2. Set variables:
    - SSLCertificateARN="" # Put your Certificate ARN in quotes.
+     # To get the certificate ARN do: aws acm list-certificates
    - HostedZoneName="" # Add your Hosted Zone Name in quotes! Example: "hostedzone.me.uk"
-
+     # To get Hosted Zone Name do: aws route53 list-hosted-Zones
+     
 3. Validate ALB template, Set variables and Create ALB Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/alb.yml
    - aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}

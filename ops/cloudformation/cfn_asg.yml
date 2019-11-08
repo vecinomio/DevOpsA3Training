@@ -4,8 +4,8 @@
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             PuppetScriptVersion=<version>                    \
-#                             WebAppVersion=<version>                          \
-#                           --profile <profile>
+#                           --profile <profile>                                \
+#                           --capabilities CAPABILITY_NAMED_IAM
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
@@ -63,12 +63,12 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: "Name"
-          Value: "webAppSG"
+          Value: !Sub "${AWS::StackName}-SG"
 
   webAppRoleProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: "webAppProfile"
+      InstanceProfileName: !Sub "${AWS::StackName}Profile"
       Path: "/"
       Roles:
         - !Ref webAppRole
@@ -87,7 +87,7 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: webAppPolicy
+        - PolicyName: !Sub "${AWS::StackName}Policy"
           PolicyDocument:
             Statement:
               - Effect: Allow
@@ -134,6 +134,21 @@ Resources:
       SecurityGroups:
         - !Ref webAutoScalingSecurityGroup
 
+  webAppAutoScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+#      MinAdjustmentMagnitude: 1
+      AutoScalingGroupName: !Ref webAppASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Sub
+          - ${albarn}/${albtgarn}
+          - albarn: !Select [1, !Split [":loadbalancer/",  !ImportValue "alb-ALB-ARN"]]
+            albtgarn: !Select [5, !Split [":", !ImportValue "alb-tgWeb-ARN"]]
+        TargetValue: 100.0
+
   webAppASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -150,7 +165,7 @@ Resources:
         - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
       Tags:
         - Key: "Name"
-          Value: "webAppASG"
+          Value: !Sub "${AWS::StackName}-ASG"
           PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
