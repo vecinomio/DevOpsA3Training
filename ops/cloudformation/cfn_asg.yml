@@ -16,7 +16,6 @@ Parameters:
   VPCStackName:
     Type: String
     AllowedValues: [ DevVPC, ProdVPC ]
-
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -80,7 +79,6 @@ Resources:
 
   webAppRole:
     Type: AWS::IAM::Role
-    Description: "Service account custom role for using additional resources"
     Properties:
       Path: "/"
       AssumeRolePolicyDocument:
