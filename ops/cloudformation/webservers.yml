@@ -1,11 +1,5 @@
 # For manual creation/update use:
-# aws cloudformation deploy --stack-name webservers                            \
-#                           --template-file ops/cloudformation/webservwers.yml \
-#                           --parameter-overrides                              \
-#                             VPCStackName=DevVPC | ProdVPC                    \
-#                             PuppetScriptVersion=<version>                    \
-#                             WebAppVersion=<version>                          \
-#                           --profile <profile>
+# aws cloudformation deploy --stack-name webserversASG --template-file ops/cloudformation/webservers.yml --parameter-overrides VPCStackName=${VPCStackName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
@@ -171,7 +165,6 @@ Resources:
           }
           hostnamectl set-hostname webserver
           retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
-          retryCommand 5 10 "yum -y update"
           retryCommand 5 10 'yum install -y puppet-agent'
           export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
           retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
