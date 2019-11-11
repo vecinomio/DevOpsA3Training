@@ -1,33 +1,18 @@
 # To Create ALB Stack:
-#    aws cloudformation deploy --stack-name alb                         \
-#                           --template-file ops/cloudformation/alb.yml  \
-#                           --parameter-overrides                       \
-#                             VPCStackName=DevVPC | ProdVPC             \
-#                             Environment=Dev | Prod                    \
-#                             HostedZoneName=your.hosted.zone.name      \
-#                           --tags Key1=Value1 Key2=Value2              \
-#                           --region <region>                           \
-#                           --profile <profile>
+# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=DevVPC Environment=Dev
 ---
   AWSTemplateFormatVersion: "2010-09-09"
 
-  Description: "Creates: ALB Security Group, App Load Balacer,
-                ALB Target groups, Record Sets."
+  Description: "Creates: ALB Security Group, App Load Balacer"
 
   Parameters:
     VPCStackName:
       Type: String
       AllowedValues: [ DevVPC, ProdVPC ]
-    HostedZoneName:
-      Type: String
-      Description: Project hosted zone name.
     Environment:
       Type: String
       Description: Dev or Prod
       AllowedValues: [ Dev, Prod ]
-    SSLCertificateARN:
-      Type: String
-      Description: ARN of existing SSL Certificate.
 
   Resources:
     ALBSecurityGroup:
@@ -68,123 +53,6 @@
           - Key: 'Environment'
             Value: !Ref Environment
 
-    WebTargetGroup:
-      Type: AWS::ElasticLoadBalancingV2::TargetGroup
-      Properties:
-        HealthCheckIntervalSeconds: 10
-        HealthCheckPath: '/'
-        HealthCheckProtocol: HTTP
-        HealthCheckTimeoutSeconds: 5
-        HealthyThresholdCount: 2
-        UnhealthyThresholdCount: 2
-        Matcher:
-          HttpCode: '200-299'
-        Name: tgWeb
-        Port: 8080
-        Protocol: HTTP
-        TargetType: instance
-        VpcId:
-          Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
-        Tags:
-        - Key: 'Name'
-          Value: 'tgWeb'
-        - Key: 'Port'
-          Value: 8080
-        - Key: 'Environment'
-          Value: !Ref Environment
-
-    JenkinsTargetGroup:
-      Type: AWS::ElasticLoadBalancingV2::TargetGroup
-      Properties:
-        HealthCheckIntervalSeconds: 10
-        HealthCheckPath: '/login'
-        HealthCheckProtocol: HTTP
-        HealthCheckTimeoutSeconds: 5
-        HealthyThresholdCount: 2
-        UnhealthyThresholdCount: 2
-        Matcher:
-          HttpCode: '200-299'
-        Name: tgJenkins
-        Port: 8080
-        Protocol: HTTP
-        TargetType: instance
-        VpcId:
-          Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
-        Tags:
-        - Key: 'Name'
-          Value: 'tgJenkins'
-        - Key: 'Port'
-          Value: 8080
-        - Key: 'Environment'
-          Value: !Ref Environment
-
-    JenkinsListenerRule:
-      Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
-      Properties:
-        Actions:
-          - Type: forward
-            TargetGroupArn: !Ref JenkinsTargetGroup
-        Conditions:
-          - Field: host-header
-            HostHeaderConfig:
-              Values:
-                - !Sub 'ci.${HostedZoneName}'
-        ListenerArn: !Ref HttpsListener
-        Priority: 1
-
-    HttpListener:
-      Type: AWS::ElasticLoadBalancingV2::Listener
-      Properties:
-        DefaultActions:
-          - Type: redirect
-            RedirectConfig:
-              Protocol: HTTPS
-              Port: 443
-              StatusCode: HTTP_301
-        LoadBalancerArn: !Ref AppLoadBalancer
-        Port: 80
-        Protocol: HTTP
-
-    HttpsListener:
-      Type: 'AWS::ElasticLoadBalancingV2::Listener'
-      Properties:
-        Certificates:
-          - CertificateArn: !Ref SSLCertificateARN
-        DefaultActions:
-          - TargetGroupArn: !Ref WebTargetGroup
-            Type: forward
-        LoadBalancerArn: !Ref AppLoadBalancer
-        Port: 443
-        Protocol: HTTPS
-
-    MainRecordSet:
-      Type: AWS::Route53::RecordSet
-      Properties:
-        AliasTarget:
-          HostedZoneId: !GetAtt AppLoadBalancer.CanonicalHostedZoneID
-          DNSName: !GetAtt AppLoadBalancer.DNSName
-        HostedZoneName: !Sub '${HostedZoneName}.'
-        Name: !Sub '${HostedZoneName}.'
-        Type: A
-
-    WwwRecordSet:
-      Type: AWS::Route53::RecordSet
-      Properties:
-        HostedZoneName: !Sub '${HostedZoneName}.'
-        Name: !Sub 'www.${HostedZoneName}.'
-        Type: CNAME
-        TTL: '300'
-        ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
-
-    JenkinsRecordSet:
-      Type: AWS::Route53::RecordSet
-      Properties:
-        HostedZoneName: !Sub '${HostedZoneName}.'
-        Name: !Sub 'ci.${HostedZoneName}.'
-        Type: CNAME
-        TTL: '300'
-        ResourceRecords: [ !GetAtt AppLoadBalancer.DNSName ]
-
   Outputs:
     AppLoadBalancerARN:
       Description: 'ARN of the ALB'
@@ -198,21 +66,3 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-DNSName'
-    AppLoadBalancerListenerARN:
-      Description: 'The ARN of the ALB HTTPS Listener'
-      Value: !Ref HttpsListener
-      Export:
-        Type: String
-        Name: !Sub '${AWS::StackName}-HttpsListener-ARN'
-    tgWebARN:
-      Description: 'ARN of the Target Group Web'
-      Value: !Ref WebTargetGroup
-      Export:
-        Type: String
-        Name: !Sub '${AWS::StackName}-tgWeb-ARN'
-    tgJenkinsARN:
-      Description: 'ARN of the Target Group Jenkins'
-      Value: !Ref JenkinsTargetGroup
-      Export:
-        Type: String
-        Name: !Sub '${AWS::StackName}-tgJenkins-ARN'
