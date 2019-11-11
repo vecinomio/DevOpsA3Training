@@ -90,7 +90,7 @@ This instruction provides:
 
 4. Validate Jenkins template and Create Jenkins Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/jenkins.yml
-   - aws cloudformation deploy --stack-name jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
+   - aws cloudformation deploy --stack-name Jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 
 
 # To create WebApp Stack:
