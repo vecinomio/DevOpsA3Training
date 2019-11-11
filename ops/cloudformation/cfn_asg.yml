@@ -4,6 +4,7 @@
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             PuppetScriptVersion=<version>                    \
+#                             HostedZoneName=devopsa3.me.uk                    \
 #                           --profile <profile>                                \
 #                           --capabilities CAPABILITY_NAMED_IAM
 ---
@@ -15,6 +16,7 @@ Parameters:
   VPCStackName:
     Type: String
     AllowedValues: [ DevVPC, ProdVPC ]
+
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -37,6 +39,9 @@ Parameters:
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
+  HostedZoneName:
+    Type: String
+    Description: Project hosted zone name.
 
 Mappings:
   RegionMap:
@@ -54,12 +59,12 @@ Resources:
         Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
+          FromPort: 22
+          ToPort: 22
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '8080'
-          ToPort: '8080'
+          FromPort: 8080
+          ToPort: 8080
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: "Name"
@@ -75,7 +80,7 @@ Resources:
 
   webAppRole:
     Type: AWS::IAM::Role
-    Description: "Service account custom role for using additional AWS resources"
+    Description: "Service account custom role for using additional resources"
     Properties:
       Path: "/"
       AssumeRolePolicyDocument:
@@ -126,7 +131,7 @@ Resources:
           retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - pupver: !Ref PuppetScriptVersion
-      AssociatePublicIpAddress: "false"
+      AssociatePublicIpAddress: false
       IamInstanceProfile: !Ref webAppRoleProfile
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       InstanceType: !Ref InstanceType
@@ -137,7 +142,6 @@ Resources:
   webAppAutoScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
-#      MinAdjustmentMagnitude: 1
       AutoScalingGroupName: !Ref webAppASG
       PolicyType: TargetTrackingScaling
       TargetTrackingConfiguration:
@@ -171,3 +175,25 @@ Resources:
       ResourceSignal:
         Count: !Ref WebASGCapacity
         Timeout: "PT20M"
+
+  MainRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        HostedZoneId:
+          Fn::ImportValue: alb-Associate-HostedZoneID
+        DNSName:
+          Fn::ImportValue: alb-ALB-DNSName
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub '${HostedZoneName}.'
+      Type: A
+
+  WwwRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub 'www.${HostedZoneName}.'
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - Fn::ImportValue: alb-ALB-DNSName
