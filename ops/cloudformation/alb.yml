@@ -125,6 +125,12 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-HttpsListener-ARN'
+    HostedZoneID:
+      Description: 'The ID of the Hosted Zone associated with the ALB'
+      Value: !GetAtt AppLoadBalancer.CanonicalHostedZoneID
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-Associate-HostedZoneID'
     tgWebARN:
       Description: 'ARN of the Target Group Web'
       Value: !Ref WebTargetGroup
