@@ -1,5 +1,5 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
-# aws cloudformation deploy --stack-name jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
+# aws cloudformation deploy --stack-name jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: "Creates: Jenkins Security Group, Jenkins Role, Jenkins Profile,

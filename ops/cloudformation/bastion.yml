@@ -1,14 +1,5 @@
 # To Create Bastion Stack:
-#    aws cloudformation deploy --stack-name bastion                         \
-#                           --template-file ops/cloudformation/bastion.yml  \
-#                           --parameter-overrides                           \
-#                             VPCStackName=DevVPC | ProdVPC                 \
-#                             Environment=Dev | Prod                        \
-#                             HostedZoneName=your.hosted.zone.name          \
-#                           --capabilities CAPABILITY_NAMED_IAM             \
-#                           --tags Key1=Value1 Key2=Value2                  \
-#                           --region <region>                               \
-#                           --profile <profile>
+# aws cloudformation deploy --stack-name bastion --template-file ops/cloudformation/bastion.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_NAMED_IAM
 ---
   AWSTemplateFormatVersion: '2010-09-09'
 

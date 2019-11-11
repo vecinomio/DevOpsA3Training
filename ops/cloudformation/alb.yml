@@ -1,5 +1,5 @@
 # To Create ALB Stack:
-# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
+# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
   AWSTemplateFormatVersion: "2010-09-09"
 
   Description: "Creates: ALB Security Group, App Load Balacer,
