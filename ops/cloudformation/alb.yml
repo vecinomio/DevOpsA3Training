@@ -1,9 +1,9 @@
 # To Create ALB Stack:
-# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=DevVPC Environment=Dev
----
+# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
   AWSTemplateFormatVersion: "2010-09-09"
 
-  Description: "Creates: ALB Security Group, App Load Balacer"
+  Description: "Creates: ALB Security Group, App Load Balacer,
+                Default Target Group, ALB Listeners"
 
   Parameters:
     VPCStackName:
@@ -13,6 +13,9 @@
       Type: String
       Description: Dev or Prod
       AllowedValues: [ Dev, Prod ]
+    SSLCertificateARN:
+      Type: String
+      Description: ARN of existing SSL Certificate.
 
   Resources:
     ALBSecurityGroup:
@@ -53,6 +56,56 @@
           - Key: 'Environment'
             Value: !Ref Environment
 
+    WebTargetGroup:
+      Type: AWS::ElasticLoadBalancingV2::TargetGroup
+      Properties:
+        HealthCheckIntervalSeconds: 10
+        HealthCheckPath: '/'
+        HealthCheckProtocol: HTTP
+        HealthCheckTimeoutSeconds: 5
+        HealthyThresholdCount: 2
+        UnhealthyThresholdCount: 2
+        Matcher:
+          HttpCode: '200-299'
+        Name: tgWeb
+        Port: 8080
+        Protocol: HTTP
+        TargetType: instance
+        VpcId:
+          Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
+        Tags:
+        - Key: 'Name'
+          Value: 'tgWeb'
+        - Key: 'Port'
+          Value: 8080
+        - Key: 'Environment'
+          Value: !Ref Environment
+
+    HttpListener:
+      Type: AWS::ElasticLoadBalancingV2::Listener
+      Properties:
+        DefaultActions:
+          - Type: redirect
+            RedirectConfig:
+              Protocol: HTTPS
+              Port: 443
+              StatusCode: HTTP_301
+        LoadBalancerArn: !Ref AppLoadBalancer
+        Port: 80
+        Protocol: HTTP
+
+    HttpsListener:
+      Type: 'AWS::ElasticLoadBalancingV2::Listener'
+      Properties:
+        Certificates:
+          - CertificateArn: !Ref SSLCertificateARN
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: !Ref WebTargetGroup
+        LoadBalancerArn: !Ref AppLoadBalancer
+        Port: 443
+        Protocol: HTTPS
+
   Outputs:
     AppLoadBalancerARN:
       Description: 'ARN of the ALB'
@@ -66,3 +119,15 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-DNSName'
+    AppLoadBalancerHTTPSListenerARN:
+      Description: 'The ARN of the ALB HTTPS Listener'
+      Value: !Ref HttpsListener
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-HttpsListener-ARN'
+    tgWebARN:
+      Description: 'ARN of the Target Group Web'
+      Value: !Ref WebTargetGroup
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-tgWeb-ARN'
