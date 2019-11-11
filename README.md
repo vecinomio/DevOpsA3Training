@@ -102,4 +102,4 @@ This instruction provides:
 
 3. Validate cfn_asg template and Create webApp Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/cfn_asg.yml
-   - aws cloudformation deploy --stack-name webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName=${VPCStackName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
+   - aws cloudformation deploy --stack-name webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} HostedZoneName=${HostedZoneName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
