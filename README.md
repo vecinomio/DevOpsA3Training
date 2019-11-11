@@ -58,20 +58,21 @@ This instruction provides:
 
 2. Set variables:
    - SSLCertificateARN="" # Put your Certificate ARN in quotes.
-     # To get the certificate ARN do: aws acm list-certificates
-   - HostedZoneName="" # Add your Hosted Zone Name in quotes! Example: "hostedzone.me.uk"
-     # To get Hosted Zone Name do: aws route53 list-hosted-Zones
-     
+   # To get the Certificate ARN do: aws acm list-certificates
+
 3. Validate ALB template, Set variables and Create ALB Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/alb.yml
-   - aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
+   - aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
 
 
 # To create Bastion Stack:
 1. Check VPC Stack, it must be up:
    - aws cloudformation describe-stacks --stack-name ${VPCStackName}
 
-2. Validate Bastion template and Create Bastion Stack:
+2. Set variables:
+   - HostedZoneName="" # Put your Hosted Zone Name in quotes! Example: "hostedzone.me.uk"
+
+3. Validate Bastion template and Create Bastion Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/bastion.yml
    - aws cloudformation deploy --stack-name bastion --template-file ops/cloudformation/bastion.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_NAMED_IAM
 
@@ -89,7 +90,7 @@ This instruction provides:
 
 4. Validate Jenkins template and Create Jenkins Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/jenkins.yml
-   - aws cloudformation deploy --stack-name jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
+   - aws cloudformation deploy --stack-name jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 
 
 # To create WebApp Stack:

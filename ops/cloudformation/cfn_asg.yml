@@ -54,12 +54,21 @@ Resources:
         Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
       SecurityGroupIngress:
         - IpProtocol: tcp
+<<<<<<< HEAD
           FromPort: '22'
           ToPort: '22'
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: '8080'
           ToPort: '8080'
+=======
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+>>>>>>> 9455e97363bd70072fa4bff55f66086005a5ea91
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: "Name"
@@ -75,8 +84,13 @@ Resources:
 
   webAppRole:
     Type: AWS::IAM::Role
+<<<<<<< HEAD
     Description: "Service account custom role for using additional AWS resources"
     Properties:
+=======
+    Properties:
+      Description: "Service account custom role for using additional AWS resources"
+>>>>>>> 9455e97363bd70072fa4bff55f66086005a5ea91
       Path: "/"
       AssumeRolePolicyDocument:
         Statement:
@@ -126,7 +140,11 @@ Resources:
           retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - pupver: !Ref PuppetScriptVersion
+<<<<<<< HEAD
       AssociatePublicIpAddress: "false"
+=======
+      AssociatePublicIpAddress: false
+>>>>>>> 9455e97363bd70072fa4bff55f66086005a5ea91
       IamInstanceProfile: !Ref webAppRoleProfile
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       InstanceType: !Ref InstanceType
@@ -137,7 +155,10 @@ Resources:
   webAppAutoScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
+<<<<<<< HEAD
 #      MinAdjustmentMagnitude: 1
+=======
+>>>>>>> 9455e97363bd70072fa4bff55f66086005a5ea91
       AutoScalingGroupName: !Ref webAppASG
       PolicyType: TargetTrackingScaling
       TargetTrackingConfiguration:
