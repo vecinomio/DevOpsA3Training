@@ -19,9 +19,15 @@ pipeline {
     stage("Build Docker Image") {
       steps {
         script {
-          docker.build("snakes:${env.BUILD_ID}")
+          dockerImage = docker.build("snakes:${env.BUILD_ID}")
         }
-        // sh 'ls -al && docker build -t snakes:0.1 .'
+      }
+    }
+    stage("Move Docker Image to ECR") {
+      steps {
+        script {
+          docker.withRegistry('http')
+        }
       }
     }
   }
