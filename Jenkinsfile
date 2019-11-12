@@ -13,8 +13,7 @@ pipeline {
   stages {
     stage("Build app") {
       steps {
-        sh 'whoami && echo $USER'
-        sh 'cd app && sudo ./build.sh'
+        sh 'cd app && ./build.sh'
       }
     }
     stage("Build Docker Image") {
