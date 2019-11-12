@@ -36,6 +36,7 @@ This instruction provides:
 
 - AutoScalingGroup with WebApp instances:
   * Backend instances are served via DNS record www.<HostedZoneName>;
+  * The number of VM instances are scaling depends on traffic load
   * If one WebApp server falls, ASG will create new one.
 
 
@@ -102,4 +103,4 @@ This instruction provides:
 
 3. Validate cfn_asg template and Create webApp Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/cfn_asg.yml
-   - aws cloudformation deploy --stack-name webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName=${VPCStackName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
+   - aws cloudformation deploy --stack-name aveli-webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName==${VPCStackName} HostedZoneName=${HostedZoneName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM

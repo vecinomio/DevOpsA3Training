@@ -4,6 +4,7 @@
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             PuppetScriptVersion=<version>                    \
+#                             HostedZoneName=<example.com>                     \
 #                           --profile <profile>                                \
 #                           --capabilities CAPABILITY_NAMED_IAM
 ---
@@ -37,6 +38,9 @@ Parameters:
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
+  HostedZoneName:
+    Type: String
+    Description: Project hosted zone name.
 
 Mappings:
   RegionMap:
@@ -76,7 +80,6 @@ Resources:
   webAppRole:
     Type: AWS::IAM::Role
     Properties:
-      Description: "Service account custom role for using additional AWS resources"
       Path: "/"
       AssumeRolePolicyDocument:
         Statement:
@@ -123,7 +126,7 @@ Resources:
           retryCommand 5 10 'r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
           retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
                              [ $? == 2 -o $? == 0 ] && return 0'
-          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
+          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp | grep "Elastic Beanstalk"'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - pupver: !Ref PuppetScriptVersion
       AssociatePublicIpAddress: false
@@ -170,3 +173,25 @@ Resources:
       ResourceSignal:
         Count: !Ref WebASGCapacity
         Timeout: "PT20M"
+
+  MainRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        HostedZoneId:
+          Fn::ImportValue: alb-Associate-HostedZoneID
+        DNSName:
+          Fn::ImportValue: alb-ALB-DNSName
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub '${HostedZoneName}.'
+      Type: A
+
+  WwwRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub 'www.${HostedZoneName}.'
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - Fn::ImportValue: alb-ALB-DNSName
