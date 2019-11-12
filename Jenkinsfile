@@ -18,7 +18,7 @@ pipeline {
     }
     stage("Build Docker Image") {
       steps {
-        docker { image 'snakes:0.1' }
+        docker.build("snakes:${env.BUILD_ID}")
         // sh 'ls -al && docker build -t snakes:0.1 .'
       }
     }
