@@ -18,7 +18,8 @@ pipeline {
     }
     stage("Build Docker Image") {
       steps {
-        sh 'ls -al && docker build -t snakes:0.1 .'
+        docker { image 'snakes:0.1' }
+        // sh 'ls -al && docker build -t snakes:0.1 .'
       }
     }
   }
