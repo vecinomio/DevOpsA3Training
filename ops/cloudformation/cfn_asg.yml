@@ -4,7 +4,7 @@
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             PuppetScriptVersion=<version>                    \
-#                             HostedZoneName=devopsa3.me.uk                    \
+#                             HostedZoneName=<example.com>                     \
 #                           --profile <profile>                                \
 #                           --capabilities CAPABILITY_NAMED_IAM
 ---
