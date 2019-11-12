@@ -13,12 +13,12 @@ pipeline {
   stages {
     stage("Build app") {
       steps {
-        sh 'cd app && chmod 777 build.sh && ./build.sh'
+        sh 'cd app && ./build.sh'
       }
     }
     stage("Build Docker Image") {
       steps {
-        sh 'cd app && pwd && docker build -t snakes:0.1 .'
+        sh 'ls -al && docker build -t snakes:0.1 .'
       }
     }
   }
