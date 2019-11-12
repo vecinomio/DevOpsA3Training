@@ -13,7 +13,7 @@ pipeline {
   stages {
     stage("Build app") {
       steps {
-        sh 'cd app && ./build.sh'
+        sh 'cd app && chmod 777 build.sh && ./build.sh'
       }
     }
     stage("Build Docker Image") {
