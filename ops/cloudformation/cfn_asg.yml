@@ -126,7 +126,7 @@ Resources:
           retryCommand 5 10 'r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
           retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
                              [ $? == 2 -o $? == 0 ] && return 0'
-          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp'
+          retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp | grep "Elastic Beanstalk"'
           cfn-signal -e $? --stack ${AWS::StackName} --resource webAppASG --region ${AWS::Region}
         - pupver: !Ref PuppetScriptVersion
       AssociatePublicIpAddress: false
