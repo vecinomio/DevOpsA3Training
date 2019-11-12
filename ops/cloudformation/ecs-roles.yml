@@ -1,0 +1,194 @@
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name ECS-roles                             \
+#                           --template-file ops/cloudformation/ecs-roles.yml   \
+#                           --parameter-overrides                              \
+#                             VPCStackName=DevVPC | ProdVPC                    \
+#                             HostedZoneName=<example.com>                     \
+#                           --profile <profile>                                \
+#                           --capabilities CAPABILITY_IAM
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "Stack creates ECS cluster and roles for fargate tasks."
+
+Parameters:
+
+  VPCStackName:
+    Type: String
+    Default: DevVPC
+    AllowedValues: [ DevVPC, ProdVPC ]
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Default: devopsa3
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  HostedZoneName:
+    Type: String
+    Default: devopsa3.me.uk
+    Description: Project hosted zone name.
+
+Resources:
+
+  MainRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        HostedZoneId:
+          Fn::ImportValue: alb-Associate-HostedZoneID
+        DNSName:
+          Fn::ImportValue: alb-ALB-DNSName
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub '${HostedZoneName}.'
+      Type: A
+
+  WwwRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub 'www.${HostedZoneName}.'
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - Fn::ImportValue: alb-ALB-DNSName
+
+# ECS Resources
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+  # A security group for the containers we will run in Fargate.
+  # Three rules, allowing network traffic from a public facing load
+  # balancer, a private internal load balancer, and from other members
+  # of the security group.
+  #
+  # Remove any of the following ingress rules that are not needed.
+  FargateContainerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP, HTTPS, SSH access
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: 'tcp'
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-SG"
+
+  EcsSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref 'FargateContainerSecurityGroup'
+      IpProtocol: '-1'
+      SourceSecurityGroupId:
+        Fn::ImportValue: alb-ALBSG-ARN
+
+  EcsSecurityGroupIngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref 'FargateContainerSecurityGroup'
+      IpProtocol: '-1'
+      SourceSecurityGroupId:
+        Fn::ImportValue: alb-ALBSG-ARN
+
+  # This is an IAM role which authorizes ECS to manage resources on your
+  # account on your behalf, such as updating your load balancer with the
+  # details of where your containers are, so that traffic can reach your
+  # containers.
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              # Rules which allow ECS to attach network interfaces to instances
+              # on your behalf in order for awsvpc networking mode to work right
+              - 'ec2:AttachNetworkInterface'
+              - 'ec2:CreateNetworkInterface'
+              - 'ec2:CreateNetworkInterfacePermission'
+              - 'ec2:DeleteNetworkInterface'
+              - 'ec2:DeleteNetworkInterfacePermission'
+              - 'ec2:Describe*'
+              - 'ec2:DetachNetworkInterface'
+
+              # Rules which allow ECS to update load balancers on your behalf
+              # with the information sabout how to send traffic to your containers
+              - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+              - 'elasticloadbalancing:DeregisterTargets'
+              - 'elasticloadbalancing:Describe*'
+              - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+              - 'elasticloadbalancing:RegisterTargets'
+            Resource: '*'
+
+  # This is a role which is used by the ECS tasks themselves.
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskExecutionRolePolicy
+          PolicyDocument:
+            Statement:
+            - Effect: Allow
+              Action:
+                # Allow the ECS Tasks to download images from ECR
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:GetDownloadUrlForLayer'
+                - 'ecr:BatchGetImage'
+
+                # Allow the ECS tasks to upload logs to CloudWatch
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
+
+Outputs:
+
+  ClusterName:
+    Description: The name of the ECS cluster
+    Value: !Ref 'ECSCluster'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]
+
+  ECSRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSRole' ] ]
+
+  ECSTaskExecutionRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSTaskExecutionRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRole' ] ]
+
+  FargateContainerSecurityGroup:
+    Description: A security group used to allow Fargate containers to receive traffic
+    Value: !Ref 'FargateContainerSecurityGroup'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'FargateContainerSecurityGroup' ] ]
