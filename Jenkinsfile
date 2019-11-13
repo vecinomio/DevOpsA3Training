@@ -37,5 +37,12 @@ pipeline {
         }
       }
     }
+    stage("CleanUp") {
+      steps {
+        echo "====================== Deleting images ====================="
+        sh 'docker image prune -af'
+        sh 'docker images'
+      }
+    }
   }
 }
