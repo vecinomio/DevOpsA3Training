@@ -1,44 +1,68 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
-# aws cloudformation deploy --stack-name Jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
+#
+# aws cloudformation deploy --stack-name Jenkins --template-file ops/cloudformation/jenkins.yml \
+#                           --parameter-overrides VPCStackName=${VPCStackName} ALBStackName=${ALBStackName} \
+#                                                 HostedZoneName=${HostedZoneName} \
+#                                MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 Priority=1 \
+#                           --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: "Creates: Jenkins Security Group, Jenkins Role, Jenkins Profile,
               Jenkins LaunchConfig and Jenkins AutoScalingGroup."
 
 Parameters:
+
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of the SSH keypair to use for the EC2 instances.
     Default: devopsa3
+
   VPCStackName:
     Type: String
+    Description: Created VPC stack name.
     MinLength: 1
+
+  ALBStackName:
+    Type: String
+    Description: Created ALB stack name.
+    MinLength: 1
+
   InstanceType:
     Type: String
     Description: Type of EC2 instance
     Default: t2.micro
     ConstraintDescription: Must be a valid EC2 instance type.
+
   S3Path:
     Type: String
     Description: The S3 path
     Default: devopsa3
+
   MountScriptVersion:
     Type: String
     Description: Bootstrap script version for mounting volume
+
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
+
   Service:
     Type: String
     Description: lifecycle policy tag
     Default: jenkins
+
   Environment:
     Type: String
     Description: Normally - ci
     Default: ci
+
   HostedZoneName:
     Type: String
     Description: Project hosted zone name.
+
+  Priority:
+    Type: String
+    Description: Listener rule priority.
 
 Mappings:
   RegionMap:
@@ -154,7 +178,7 @@ Resources:
       Type: CNAME
       TTL: '300'
       ResourceRecords:
-        - Fn::ImportValue: alb-ALB-DNSName
+        - Fn::ImportValue: !Sub "${ALBStackName}-ALB-DNSName"
 
   JenkinsTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -177,7 +201,7 @@ Resources:
       - Key: 'Name'
         Value: !Sub 'tg${AWS::StackName}'
       - Key: 'Port'
-        Value: 8080
+        Value: '8080'
       - Key: 'Environment'
         Value: !Ref Environment
 
@@ -192,8 +216,9 @@ Resources:
           HostHeaderConfig:
             Values:
               - !Sub 'ci.${HostedZoneName}'
-      ListenerArn: !ImportValue alb-HttpsListener-ARN
-      Priority: 1
+      ListenerArn:
+        Fn::ImportValue: !Sub "${ALBStackName}-HttpsListener-ARN"
+      Priority: !Ref Priority
 
   JenkinsLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
