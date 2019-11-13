@@ -11,8 +11,9 @@ pipeline {
     timestamps()
   }
   environment {
-    ECRRepoName = '054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes'
-    ECRURL = 'http://054017840000.dkr.ecr.us-east-1.amazonaws.com'
+    ECRURI = '054017840000.dkr.ecr.us-east-1.amazonaws.com'
+    RepoName = 'snakes'
+    // ECRURL = 'http://054017840000.dkr.ecr.us-east-1.amazonaws.com'
   }
   stages {
     stage("Build app") {
@@ -23,16 +24,16 @@ pipeline {
     stage("Build Docker Image") {
       steps {
         script {
-          dockerImage = docker.build("${ECRRepoName}:${env.BUILD_ID}")
+          dockerImage = docker.build("${ECRURI}/${RepoName}:${env.BUILD_ID}")
         }
       }
     }
     stage("Push artifact to ECR") {
       steps {
         script {
-          sh("eval \$(aws ecr get-login --no-include-email | sed 's|https://||')")
+          sh("eval \$(aws ecr get-login --no-include-email --region us-east-1 | sed 's|https://||')")
           //sh '$(aws ecr get-login --no-include-email --region us-east-1)'
-          docker.withRegistry(ECRURL) {
+          docker.withRegistry("http://${ECRURI}") {
             dockerImage.push()
           }
         }
@@ -40,7 +41,7 @@ pipeline {
     }
     stage("CleanUp") {
       steps {
-        echo "====================== Deleting images ====================="
+        echo "====================== Removing images ====================="
         sh 'docker image prune -af'
         sh 'docker images'
       }
