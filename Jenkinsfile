@@ -30,8 +30,7 @@ pipeline {
     stage("Push artifact to ECR") {
       steps {
         script {
-          //sh("eval \$(aws ecr get-login --no-include-email | sed 's|https://||')")
-          //sh '$(aws ecr get-login --no-include-email --region us-east-1)'
+          sh "$(aws ecr get-login --no-include-email --region us-east-1)"
           docker.withRegistry("http://${ECRURI}") {
             dockerImage.push()
           }
