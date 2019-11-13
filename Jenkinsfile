@@ -25,7 +25,11 @@ pipeline {
     }
     stage("Push artifact to ECR") {
       steps {
-        sh 'docker push dockerImage'
+        script {
+          docker.withRegistry("https://054017840000.dkr.ecr.us-east-1.amazonaws.com") {
+            dockerImage.push()
+          }
+        }
       }
     }
   }
