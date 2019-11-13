@@ -10,6 +10,10 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
     timestamps()
   }
+  environment {
+    ECRRepoName = '054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes'
+    ECRURL = 'http://054017840000.dkr.ecr.us-east-1.amazonaws.com'
+  }
   stages {
     stage("Build app") {
       steps {
@@ -19,7 +23,7 @@ pipeline {
     stage("Build Docker Image") {
       steps {
         script {
-          dockerImage = docker.build("054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:${env.BUILD_ID}")
+          dockerImage = docker.build("ECRRepoName:${env.BUILD_ID}")
         }
       }
     }
@@ -27,7 +31,7 @@ pipeline {
       steps {
         script {
           sh '$(aws ecr get-login --no-include-email --region us-east-1)'
-          docker.withRegistry("https://054017840000.dkr.ecr.us-east-1.amazonaws.com") {
+          docker.withRegistry(ECRURL) {
             dockerImage.push()
           }
         }
