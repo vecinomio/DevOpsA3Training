@@ -19,9 +19,13 @@ pipeline {
     stage("Build Docker Image") {
       steps {
         script {
-          docker.build("snakes:${env.BUILD_ID}")
+          dockerImage = docker.build("054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:${env.BUILD_ID}")
         }
-        // sh 'ls -al && docker build -t snakes:0.1 .'
+      }
+    }
+    stage("Push artifact to ECR") {
+      steps {
+        sh 'docker push dockerImage'
       }
     }
   }
