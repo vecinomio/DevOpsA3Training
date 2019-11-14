@@ -141,6 +141,9 @@ Resources:
                   - ecr:GetAuthorizationToken
                   - ecr:InitiateLayerUpload
                   - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:PutImage
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile

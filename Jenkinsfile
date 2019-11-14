@@ -10,6 +10,10 @@ pipeline {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
     timestamps()
   }
+  environment {
+    ECRURI = '054017840000.dkr.ecr.us-east-1.amazonaws.com'
+    RepoName = 'snakes'
+  }
   stages {
     stage("Build app") {
       steps {
@@ -19,15 +23,30 @@ pipeline {
     stage("Build Docker Image") {
       steps {
         script {
-          dockerImage = docker.build("snakes:${env.BUILD_ID}")
+          dockerImage = docker.build("${ECRURI}/${RepoName}:${env.BUILD_ID}")
         }
       }
     }
-    stage("Move Docker Image to ECR") {
+    stage("Push artifact to ECR") {
       steps {
         script {
-          docker.withRegistry('http')
+          sh '$(aws ecr get-login --no-include-email --region us-east-1) &> /dev/null'
+          docker.withRegistry("https://${ECRURI}") {
+            dockerImage.push()
+          }
         }
+      }
+    }
+    stage("CleanUp") {
+      steps {
+        echo "====================== Removing images ====================="
+        sh 'docker image prune -af'
+        sh 'docker images'
+      }
+    }
+    stage("Create Stack with WebServers") {
+      steps {
+        sh 'aws cloudformation deploy --stack-name webservers --template-file ops/cloudformation/webservers.yml --parameter-overrides VPCStackName=DevVPC HostedZoneName=devopsa3.me.uk Environment=Dev ImageTag=32 --capabilities CAPABILITY_NAMED_IAM --region us-east-1'
       }
     }
   }
