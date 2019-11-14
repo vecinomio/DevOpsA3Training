@@ -220,8 +220,8 @@ function mount_jenkins_data_volume() {
   fi
 
   # Create a mount point
-  mkdir -p ${mount_point}
-  log "Created mount point."
+#  mkdir -p ${mount_point}
+#  log "Created mount point."
 
   # Add a new entry for the volume to /etc/fstab
   cat - >> /etc/fstab <<EOF
