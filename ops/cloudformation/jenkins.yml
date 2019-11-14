@@ -138,6 +138,9 @@ Resources:
                   - route53:ListHostedZones
                   - route53:ChangeResourceRecordSets
                   - route53:GetChange
+                  - ecr:GetAuthorizationToken
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
