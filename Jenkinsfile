@@ -46,7 +46,7 @@ pipeline {
     }
     stage("Create Stack with WebServers") {
       steps {
-        sh 'aws cloudformation deploy --stack-name webservers --template-file ops/cloudformation/webservers.yml --parameter-overrides VPCStackName=DevVPC HostedZoneName=devopsa3.me.uk Environment=Dev ImageTag=32 --capabilities CAPABILITY_NAMED_IAM --region us-east-1'
+        sh "aws cloudformation deploy --stack-name webservers --template-file ops/cloudformation/webservers.yml --parameter-overrides VPCStackName=DevVPC HostedZoneName=devopsa3.me.uk Environment=Dev ImageTag=${env.BUILD_ID} --capabilities CAPABILITY_NAMED_IAM --region us-east-1"
       }
     }
   }
