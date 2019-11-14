@@ -260,7 +260,7 @@ Resources:
             retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
             sleep 30
             curl -sS http://localhost:8080 | grep 'Authentication required'
-            cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
+            cfn-signal -s true --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion
             pupver: !Ref PuppetScriptVersion
 
