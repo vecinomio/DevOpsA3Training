@@ -7,6 +7,7 @@ LABEL maintainer = "imaki" \
 
 WORKDIR /home/project
 COPY . .
-RUN cd eb-tomcat-snakes && cp ${app_name}.war /usr/local/tomcat/webapps/
+RUN mv /usr/local/tomcat/webapps/ROOT/ /usr/local/tomcat/webapps/default-ROOT
+RUN cd eb-tomcat-snakes && cp ${app_name}.war /usr/local/tomcat/webapps/ROOT
 EXPOSE 8080
 #CMD ["catalina.sh", "run"]

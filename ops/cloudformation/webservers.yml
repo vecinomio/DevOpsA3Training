@@ -83,7 +83,6 @@ Resources:
                 Resource: "*"
                 Action:
                   - s3:GetObject
-                  - s3:PutObject
                   - ecr:GetAuthorizationToken
                   - ecr:BatchCheckLayerAvailability
                   - ecr:GetDownloadUrlForLayer
@@ -172,7 +171,10 @@ Resources:
           systemctl start docker
           usermod -a -G docker ec2-user
           $(aws ecr get-login --no-include-email --region us-east-1)
-          docker run -d -p 80:8080 054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:${tagVersion}
+          docker run -d -p 8080:8080 054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:${tagVersion}
+          sleep 20
+          curl -sS http://localhost:8080/snakes/ | grep 'Does it have snakes?'
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource webserversASG --region ${AWS::Region}
         - tagVersion: !Ref ImageTag
       AssociatePublicIpAddress: "false"
       IamInstanceProfile: !Ref webserversRoleProfile
