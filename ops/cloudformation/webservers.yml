@@ -169,7 +169,7 @@ Resources:
           }
           hostnamectl set-hostname webserver
           retryCommand 5 10 'amazon-linux-extras install docker'
-          systemctl docker start
+          systemctl start docker
           usermod -a -G docker ec2-user
           $(aws ecr get-login --no-include-email --region us-east-1)
           docker run -d -p 80:8080 054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:${tagVersion}
