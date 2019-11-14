@@ -12,15 +12,15 @@ echo .
 javac -classpath WEB-INF/lib/*:WEB-INF/classes -d WEB-INF/classes com/snakes/web/SearchMovies.java
 echo .
 if [ -d ".ebextensions/httpd/conf.d" ]; then
-  jar -cf snakes.war *.jsp images css js WEB-INF .ebextensions/*.config .ebextensions/*.json .ebextensions/httpd/conf.d/*.conf
+  jar -cf ROOT.war *.jsp images css js WEB-INF .ebextensions/*.config .ebextensions/*.json .ebextensions/httpd/conf.d/*.conf
 else
-  jar -cf snakes.war *.jsp images css js WEB-INF .ebextensions/*.config .ebextensions/*.json
+  jar -cf ROOT.war *.jsp images css js WEB-INF .ebextensions/*.config .ebextensions/*.json
 fi
 echo .
 if [ -d "/Library/Tomcat/webapps" ]; then
-  cp snakes.war /Library/Tomcat/webapps
+  cp ROOT.war /Library/Tomcat/webapps
   echo .
 fi
-mv snakes.war ../
+mv ROOT.war ../
 echo .
 echo "SUCCESS"
