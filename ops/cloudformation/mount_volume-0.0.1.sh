@@ -250,9 +250,9 @@ function main() {
     esac
   done
 
-  wait_until yum update -y
+#  wait_until yum update -y
 
-  set_hostname ${hostname}
+#  set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
   yum reinstall -y aws-cli aws-cfn-bootstrap
 }

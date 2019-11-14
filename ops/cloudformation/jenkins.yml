@@ -162,6 +162,12 @@ Resources:
                   - route53:ListHostedZones
                   - route53:ChangeResourceRecordSets
                   - route53:GetChange
+                  - ecr:GetAuthorizationToken
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:PutImage
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
@@ -244,13 +250,14 @@ Resources:
                     [ $? == 2 -o $? == 0 ] && break
                 done
             }
-            retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
+            systemctl set-hostname jenkins
             rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
-            retryCommand 5 10 'yum install -y puppet-agent git'
+            retryCommand 5 10 'yum install -y puppet-agent git aws-cli aws-cfn-bootstrap'
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
             retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
+            retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
             sleep 30
             curl -sS http://localhost:8080 | grep 'Authentication required'
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
