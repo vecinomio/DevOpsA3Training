@@ -4,14 +4,22 @@
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             HostedZoneName=<example.com>                     \
+#                             InstanceType=t3.micro                            \
+#                             DesiredCapacity=1                                \
+#                             MaxSize=1                                        \
 #                           --profile <profile>                                \
 #                           --capabilities CAPABILITY_IAM
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "Stack creates ECS cluster and roles for fargate tasks."
+Description: "Stack creates ECS cluster and roles, ASG for container instances."
 
 Parameters:
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of the SSH keypair to use for the EC2 instances.
+    Default: devopsa3
 
   VPCStackName:
     Type: String
@@ -22,6 +30,28 @@ Parameters:
     Type: String
     Default: devopsa3.me.uk
     Description: Project hosted zone name.
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: Must be valid EC2 instance type.
+
+  DesiredCapacity:
+    Type: String
+    Default: 1
+    Description: How many EC2 instances on startup.
+    ConstraintDescription: Must be less than MaxSize parameter.
+
+  MaxSize:
+    Type: String
+    Default: 3
+    Description: Maximum value of EC2 instances in group.
+
+  ECSAMI:
+    Type: AWS::EC2::Image::Id
+    Default: ami-097e3d1cdb541f43e
+    Description: Desired ECS-optimized AMI image.
+    ConstraintDescription: Must be valid ECS-optimized AMI image ID.
 
 Resources:
 
@@ -51,13 +81,10 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
 
-  # A security group for the containers we will run in Fargate.
-  # Three rules, allowing network traffic from a public facing load
-  # balancer, a private internal load balancer, and from other members
-  # of the security group.
-  #
-  # Remove any of the following ingress rules that are not needed.
-  FargateContainerSecurityGroup:
+  # A security group for the containers we will run in ECS.
+  # Two rules, allowing network traffic from a public facing load
+  # balancer and from other members of the security group.
+  EcsHostSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable HTTP, HTTPS, SSH access
@@ -80,7 +107,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from the public ALB
-      GroupId: !Ref 'FargateContainerSecurityGroup'
+      GroupId: !Ref 'EcsHostSecurityGroup'
       IpProtocol: '-1'
       SourceSecurityGroupId:
         Fn::ImportValue: alb-ALBSG-ARN
@@ -89,10 +116,106 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from other containers in the same security group
-      GroupId: !Ref 'FargateContainerSecurityGroup'
+      GroupId: !Ref 'EcsHostSecurityGroup'
       IpProtocol: '-1'
       SourceSecurityGroupId:
         Fn::ImportValue: alb-ALBSG-ARN
+
+  # Autoscaling group. This launches the actual EC2 instances that will register
+  # themselves as members of the cluster, and run the docker containers.
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
+      LaunchConfigurationName: !Ref 'ContainerInstances'
+      MinSize: '1'
+      MaxSize: !Ref 'MaxSize'
+      DesiredCapacity: !Ref 'DesiredCapacity'
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref 'DesiredCapacity'
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: true
+
+  ContainerInstances:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref ECSAMI
+      SecurityGroups: [!Ref 'EcsHostSecurityGroup']
+      InstanceType: !Ref 'InstanceType'
+      IamInstanceProfile: !Ref 'EC2InstanceProfile'
+      KeyName: !Ref KeyPairName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'application-autoscaling:*'
+              - 'cloudwatch:DescribeAlarms'
+              - 'cloudwatch:PutMetricAlarm'
+              - 'ecs:DescribeServices'
+              - 'ecs:UpdateService'
+            Resource: '*'
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+
+  # Role for the EC2 hosts. This allows the ECS agent on the EC2 hosts
+  # to communciate with the ECS control plane, as well as download the docker
+  # images from ECR to run on your host.
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'ecs:CreateCluster'
+              - 'ecs:DeregisterContainerInstance'
+              - 'ecs:DiscoverPollEndpoint'
+              - 'ecs:Poll'
+              - 'ecs:RegisterContainerInstance'
+              - 'ecs:StartTelemetrySession'
+              - 'ecs:Submit*'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetDownloadUrlForLayer'
+            Resource: '*'
 
   # This is an IAM role which authorizes ECS to manage resources on your
   # account on your behalf, such as updating your load balancer with the
@@ -181,8 +304,8 @@ Outputs:
     Export:
       Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRole' ] ]
 
-  FargateContainerSecurityGroup:
-    Description: A security group used to allow Fargate containers to receive traffic
-    Value: !Ref 'FargateContainerSecurityGroup'
+  EcsHostSecurityGroup:
+    Description: A security group used to allow containers to receive traffic
+    Value: !Ref 'EcsHostSecurityGroup'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'FargateContainerSecurityGroup' ] ]
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'EcsHostSecurityGroup' ] ]

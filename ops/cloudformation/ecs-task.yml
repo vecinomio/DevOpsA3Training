@@ -2,14 +2,14 @@
 # aws cloudformation deploy --stack-name ECS-task --template-file ecs-task.yml
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Deploy a service on AWS Fargate, hosted in a private subnet, but accessible via a public load balancer.
+Description: Deploy a service on ECS, hosted in a private subnet, but accessible via a public load balancer.
 
 Parameters:
 
   VPCStackName:
     Type: String
     Default: DevVPC
-    Description: The name of the parent Fargate networking stack that you created. Necessary
+    Description: The name of the parent networking stack that you created. Necessary
                  to locate and reference resources created by that stack.
   ECSStackName:
     Type: String
@@ -87,7 +87,7 @@ Resources:
       Memory: !Ref 'ContainerMemory'
       NetworkMode: awsvpc
       RequiresCompatibilities:
-        - FARGATE
+        - EC2
       ExecutionRoleArn:
         Fn::ImportValue: !Sub "${ECSStackName}:ECSTaskExecutionRole"
       TaskRoleArn:
@@ -113,7 +113,6 @@ Resources:
       ServiceName: !Ref 'ServiceName'
       Cluster:
         Fn::ImportValue: !Sub "${ECSStackName}:ClusterName"
-      LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
@@ -122,7 +121,7 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           SecurityGroups:
-            - Fn::ImportValue: !Sub "${ECSStackName}:FargateContainerSecurityGroup"
+            - Fn::ImportValue: !Sub "${ECSStackName}:EcsHostSecurityGroup"
           Subnets:
             - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
             - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
