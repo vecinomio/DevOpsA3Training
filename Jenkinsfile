@@ -13,6 +13,7 @@ pipeline {
   environment {
     ECRURI = '054017840000.dkr.ecr.us-east-1.amazonaws.com'
     RepoName = 'snakes'
+
   }
   stages {
     stage("Build app") {
