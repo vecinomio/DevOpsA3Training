@@ -119,7 +119,6 @@ Resources:
       DesiredCount: !Ref 'DesiredCount'
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
           SecurityGroups:
             - Fn::ImportValue: !Sub "${ECSStackName}:EcsHostSecurityGroup"
           Subnets:
