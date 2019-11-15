@@ -25,6 +25,17 @@ Parameters:
     Type: String
     Default: DevVPC
     AllowedValues: [ DevVPC, ProdVPC ]
+    Description: The name of the parent networking stack that you created.
+
+  ALBStackName:
+    Type: String
+    Default: alb
+    Description: The name of the previously created ALB stack.
+
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment to provision.
 
   HostedZoneName:
     Type: String
@@ -60,9 +71,9 @@ Resources:
     Properties:
       AliasTarget:
         HostedZoneId:
-          Fn::ImportValue: alb-Associate-HostedZoneID
+          Fn::ImportValue: !Sub "${ALBStackName}-Associate-HostedZoneID"
         DNSName:
-          Fn::ImportValue: alb-ALB-DNSName
+          Fn::ImportValue: !Sub "${ALBStackName}-ALB-DNSName"
       HostedZoneName: !Sub '${HostedZoneName}.'
       Name: !Sub '${HostedZoneName}.'
       Type: A
@@ -75,7 +86,7 @@ Resources:
       Type: CNAME
       TTL: '300'
       ResourceRecords:
-        - Fn::ImportValue: alb-ALB-DNSName
+        - Fn::ImportValue: !Sub "${ALBStackName}-ALB-DNSName"
 
 # ECS Resources
   ECSCluster:
@@ -102,6 +113,8 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub "${AWS::StackName}-SG"
+        - Key: 'Environment'
+          Value: !Ref Environment
 
   EcsSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
@@ -110,7 +123,7 @@ Resources:
       GroupId: !Ref 'EcsHostSecurityGroup'
       IpProtocol: '-1'
       SourceSecurityGroupId:
-        Fn::ImportValue: alb-ALBSG-ARN
+        Fn::ImportValue: !Sub "${ALBStackName}-ALBSG-ARN"
 
   EcsSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
@@ -119,7 +132,7 @@ Resources:
       GroupId: !Ref 'EcsHostSecurityGroup'
       IpProtocol: '-1'
       SourceSecurityGroupId:
-        Fn::ImportValue: alb-ALBSG-ARN
+        Fn::ImportValue: !Sub "${ALBStackName}-ALBSG-ARN"
 
   # Autoscaling group. This launches the actual EC2 instances that will register
   # themselves as members of the cluster, and run the docker containers.

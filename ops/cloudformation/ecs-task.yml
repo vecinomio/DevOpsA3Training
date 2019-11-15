@@ -21,6 +21,10 @@ Parameters:
     Default: alb
     Description: The name of the connected ALB stack.
 
+  Environment:
+    Type: String
+    Default: dev
+
   ServiceName:
     Type: String
     Default: dropwizard
@@ -152,6 +156,11 @@ Resources:
       UnhealthyThresholdCount: 2
       VpcId:
         Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      Tags:
+      - Key: 'Name'
+        Value: !Sub 'tg${AWS::StackName}'
+      - Key: 'Environment'
+        Value: !Ref Environment
 
   # Create a rule on the load balancer for routing traffic to the target group
   LoadBalancerRule:
