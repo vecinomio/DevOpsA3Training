@@ -215,7 +215,8 @@ function mount_jenkins_data_volume() {
   fi
 
   # Create a new file system if needed
-  if [[ $(blkid -p -u filesystem ${device}) != 0 ]]; then
+  if !( blkid -p -u filesystem ${device} | grep xfs); then
+    log "Creating filesystem."
     mkfs.xfs -f ${device}
   fi
 

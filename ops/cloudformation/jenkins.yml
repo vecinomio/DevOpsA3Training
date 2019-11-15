@@ -256,7 +256,7 @@ Resources:
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
-            retryCommand 5 10 'puppet apply --test --debug /etc/puppetlabs/code/environments/production/manifests/site.pp'
+            retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
             retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
             usermod -aG docker jenkins
             sleep 20
