@@ -261,8 +261,8 @@ Resources:
             usermod -aG docker jenkins
             systemctl enable docker
             systemctl start docker
-            sleep 20
             systemctl restart jenkins
+            sleep 20
             curl -sS http://localhost:8080 | grep 'Authentication required'
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion
