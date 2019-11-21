@@ -7,8 +7,8 @@ This instruction provides:
   - how to create an ALB Stack in custom VPC.
   - how to create a Bastion Stack in custom VPC.
   - how to create Jenkins and Jenkins-ebs stacks in custom VPC.
-  - how to create ECR Stack in custom VPC.
-  - how to create ECS-roles Stack in custom VPC.
+  - how to create ECR-repo Stack in custom VPC.
+  - how to create ECS-cluster Stack in custom VPC.
   - how to create ECS-task Stack in custom VPC.
 
 
@@ -117,9 +117,44 @@ This instruction provides:
        $ aws cloudformation deploy --stack-name Jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
 
 
-# To create ECR Stack:
-1. Validate ecr template and Create ecr Stack:
+# To create ECR-repo Stack:
+1. Validate ecr-repo template and Create ECR-repo Stack:
 
-       $ aws cloudformation validate-template --template-body file://ops/cloudformation/ecr.yml
+       $ aws cloudformation validate-template --template-body file://ops/cloudformation/ecr-repo.yml
 
-       $ aws cloudformation deploy --stack-name ECR-repo --template-file ecr.yml
+       $ aws cloudformation deploy --stack-name ECR-repo --template-file ops/cloudformation/ecr-repo.yml
+
+
+# To create ECS-cluster Stack:
+1. Check VPC Stack. It must be up:
+
+       $ aws cloudformation describe-stacks --stack-name ${VPCStackName}
+
+2. Check ALB Stack. It must be up:
+
+       $ aws cloudformation describe-stacks --stack-name alb
+
+3. Validate ecs-cluster template and Create ECS-cluster Stack:
+
+       $ aws cloudformation validate-template --template-body file://ops/cloudformation/ecs-cluster.yml
+
+       $ aws cloudformation deploy --stack-name ECS-cluster --template-file ops/cloudformation/ecs-cluster.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_IAM
+
+
+# To create ECS-task Stack:
+1. Check VPC Stack. It must be up:
+
+       $ aws cloudformation describe-stacks --stack-name ${VPCStackName}
+
+2. Check ALB Stack. It must be up:
+
+       $ aws cloudformation describe-stacks --stack-name alb
+
+3. Check ECS-cluster Stack. It must be up:
+
+      $ aws cloudformation describe-stacks --stack-name ECS-cluster
+
+4. Validate ecs-task template and Create ECS-task Stack:
+      $ aws cloudformation validate-template --template-body file://ops/cloudformation/ecs-task.yml
+
+      $ aws cloudformation deploy --stack-name ECS-task --template-file ops/cloudformation/ecs-task.yml --parameter-overrides VPCStackName=${VPCStackName}
