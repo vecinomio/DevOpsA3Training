@@ -1,6 +1,5 @@
 # DevOpsA3Training
 
-
 ## Description:
 This instruction provides:
   - how to create a VPC Stack with custom VPC;
