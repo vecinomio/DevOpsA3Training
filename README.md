@@ -18,9 +18,7 @@ This instruction provides:
   * All resources in subnets Private0 and Private1 has Internet access through NAT Gateway
 
 - Application Load Balancer:
-  * ALB has 2 Target Groups: "web" and "jenkins";
-  * Web-servers are available at "www.your.hosted.zone";
-  * Jenkins is available at "ci.your.hosted.zone";
+  * ALB has default Target Group;
   * All requests from HTTP redirecting to HTTPS.
 
 - AutoScalingGroup with only one Bastion-host instance:
