@@ -152,9 +152,9 @@ This instruction provides:
 
 3. Check ECS-cluster Stack. It must be up:
 
-      $ aws cloudformation describe-stacks --stack-name ECS-cluster
+       $ aws cloudformation describe-stacks --stack-name ECS-cluster
 
 4. Validate ecs-task template and Create ECS-task Stack:
-      $ aws cloudformation validate-template --template-body file://ops/cloudformation/ecs-task.yml
+       $ aws cloudformation validate-template --template-body file://ops/cloudformation/ecs-task.yml
 
-      $ aws cloudformation deploy --stack-name ECS-task --template-file ops/cloudformation/ecs-task.yml --parameter-overrides VPCStackName=${VPCStackName}
+       $ aws cloudformation deploy --stack-name ECS-task --template-file ops/cloudformation/ecs-task.yml --parameter-overrides VPCStackName=${VPCStackName}
