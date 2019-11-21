@@ -1,5 +1,5 @@
 # For manual creation/update use:
-# aws cloudformation deploy --stack-name ECS-task --template-file ecs-task.yml
+# aws cloudformation deploy --stack-name ECS-task --template-file ecs-task.yml --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: Deploy a service on ECS, hosted in a private subnet, but accessible via a public load balancer.
@@ -13,7 +13,7 @@ Parameters:
                  to locate and reference resources created by that stack.
   ECSStackName:
     Type: String
-    Default: ECS-roles
+    Default: ECS-cluster
     Description: The name of the parent ECS cluster stack.
 
   ALBStackName:
@@ -68,7 +68,19 @@ Parameters:
   DesiredCount:
     Type: Number
     Default: 1
-    Description: How many copies of the service task to run
+    Description: How many copies of the service task to run.
+
+  MinCapacity:
+    Type: Number
+    Default: 1
+    Description: How many copies of containers have to be run minimum.
+    ConstraintDescription: Must be >= 1
+
+  MaxCapacity:
+    Type: Number
+    Default: 10
+    Description: How many copies of containers have to be run maximum.
+    ConstraintDescription: Must be >= MinCapacity
 
   Role:
     Type: String
@@ -133,6 +145,62 @@ Resources:
         - ContainerName: !Ref 'ServiceName'
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn: !Ref 'TargetGroup'
+
+  ScalableTargetRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'application-autoscaling.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+      - PolicyName: ecs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'ecs:DescribeServices'
+            - 'ecs:UpdateService'
+            Resource: '*'
+      - PolicyName: cloudwatch
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'cloudwatch:DescribeAlarms'
+            Resource: '*'
+
+  ScalableTarget:
+    Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    Properties:
+      MinCapacity: !Ref MinCapacity
+      MaxCapacity: !Ref MaxCapacity
+      ResourceId: !Sub
+      - 'service/${Cluster}/${Service}'
+      - Cluster: !Ref ECSStackName
+        Service: !GetAtt 'Service.Name'
+      RoleARN: !GetAtt 'ScalableTargetRole.Arn'
+      ScalableDimension: 'ecs:service:DesiredCount'
+      ServiceNamespace: ecs
+
+  ScalePolicy:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: !Sub '${AWS::StackName}-scalepolicy'
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 5
+        ScaleOutCooldown: 5
+        TargetValue: 60
 
   # A target group. This is used for keeping track of all the tasks, and
   # what IP addresses / port numbers they have. You can query it yourself,

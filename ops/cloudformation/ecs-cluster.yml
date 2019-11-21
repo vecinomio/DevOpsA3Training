@@ -1,6 +1,6 @@
 # For manual creation/update use:
-# aws cloudformation deploy --stack-name ECS-roles                             \
-#                           --template-file ops/cloudformation/ecs-roles.yml   \
+# aws cloudformation deploy --stack-name ECS-cluster                           \
+#                           --template-file ops/cloudformation/ecs-cluster.yml \
 #                           --parameter-overrides                              \
 #                             VPCStackName=DevVPC | ProdVPC                    \
 #                             HostedZoneName=<example.com>                     \
@@ -184,6 +184,8 @@ Resources:
           Tags:
           - Key: Name
             Value: !Ref AWS::StackName
+          - Key: Environment
+            Value: !Ref Environment
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash -xe
