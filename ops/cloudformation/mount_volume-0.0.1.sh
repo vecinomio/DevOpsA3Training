@@ -215,13 +215,14 @@ function mount_jenkins_data_volume() {
   fi
 
   # Create a new file system if needed
-  if [[ $(blkid -p -u filesystem ${device}) != 0 ]]; then
+  if !( blkid -p -u filesystem ${device} | grep xfs); then
+    log "Creating filesystem."
     mkfs.xfs -f ${device}
   fi
 
   # Create a mount point
-  mkdir -p ${mount_point}
-  log "Created mount point."
+#  mkdir -p ${mount_point}
+#  log "Created mount point."
 
   # Add a new entry for the volume to /etc/fstab
   cat - >> /etc/fstab <<EOF
@@ -250,9 +251,9 @@ function main() {
     esac
   done
 
-  wait_until yum update -y
+#  wait_until yum update -y
 
-  set_hostname ${hostname}
+#  set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
   yum reinstall -y aws-cli aws-cfn-bootstrap
 }
