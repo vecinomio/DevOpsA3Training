@@ -1,2 +1,9 @@
-A3-ASG-web.yaml
-DevOps A3 Cloud Architecture V2.png
+*.DS_Store
+*.war
+*.zip
+*.class
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
