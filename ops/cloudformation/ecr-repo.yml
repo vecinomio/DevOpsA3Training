@@ -1,5 +1,5 @@
 # For manual creation/update use:
-# aws cloudformation deploy --stack-name ECR-repo --template-file ecr.yml
+# aws cloudformation deploy --stack-name ECR-repo --template-file ecr-repo.yml
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 

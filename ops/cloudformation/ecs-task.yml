@@ -183,7 +183,8 @@ Resources:
       MaxCapacity: !Ref MaxCapacity
       ResourceId: !Sub
       - 'service/${Cluster}/${Service}'
-      - Cluster: !Ref ECSStackName
+      - Cluster:
+          Fn::ImportValue: !Sub "${ECSStackName}:ClusterName"
         Service: !GetAtt 'Service.Name'
       RoleARN: !GetAtt 'ScalableTargetRole.Arn'
       ScalableDimension: 'ecs:service:DesiredCount'
@@ -193,7 +194,7 @@ Resources:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
       PolicyName: !Sub '${AWS::StackName}-scalepolicy'
-      PolicyType: StepScaling
+      PolicyType: TargetTrackingScaling
       ScalingTargetId: !Ref ScalableTarget
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
