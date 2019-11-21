@@ -104,11 +104,11 @@ This instruction provides:
 
        $ aws cloudformation describe-stacks --stack-name alb
 
-3. Validate ebs-volume template and Create jenkins-ebs Stack:
+3. Validate jenkins-ebs template and Create jenkins-ebs Stack:
 
-       $ aws cloudformation validate-template --template-body file://ops/cloudformation/ebs-volume.yml
+       $ aws cloudformation validate-template --template-body file://ops/cloudformation/jenkins-ebs.yml
 
-       $ aws cloudformation deploy --stack-name jenkins-ebs --template-file ops/cloudformation/ebs-volume.yml --parameter-overrides VPCStackName=${VPCStackName} --capabilities CAPABILITY_IAM
+       $ aws cloudformation deploy --stack-name jenkins-ebs --template-file ops/cloudformation/jenkins-ebs.yml --parameter-overrides VPCStackName=${VPCStackName} --capabilities CAPABILITY_IAM
 
 4. Validate Jenkins template and Create Jenkins Stack:
 
