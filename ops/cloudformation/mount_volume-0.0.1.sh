@@ -220,10 +220,6 @@ function mount_jenkins_data_volume() {
     mkfs.xfs -f ${device}
   fi
 
-  # Create a mount point
-#  mkdir -p ${mount_point}
-#  log "Created mount point."
-
   # Add a new entry for the volume to /etc/fstab
   cat - >> /etc/fstab <<EOF
 # device    mount point              type  options   dump  pass
@@ -251,9 +247,6 @@ function main() {
     esac
   done
 
-#  wait_until yum update -y
-
-#  set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
   yum reinstall -y aws-cli aws-cfn-bootstrap
 }

@@ -1,0 +1,358 @@
+# For manual creation/update use:
+# aws cloudformation deploy --stack-name ECS-cluster                           \
+#                           --template-file ops/cloudformation/ecs-cluster.yml \
+#                           --parameter-overrides                              \
+#                             VPCStackName=DevVPC | ProdVPC                    \
+#                             HostedZoneName=<example.com>                     \
+#                             InstanceType=t3.micro                            \
+#                             DesiredCapacity=1                                \
+#                             MaxSize=3                                        \
+#                           --profile <profile>                                \
+#                           --capabilities CAPABILITY_IAM
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "Stack creates ECS cluster and roles, ASG for container instances."
+
+Parameters:
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of the SSH keypair to use for the EC2 instances.
+    Default: devopsa3
+
+  VPCStackName:
+    Type: String
+    Default: DevVPC
+    AllowedValues: [ DevVPC, ProdVPC ]
+    Description: The name of the parent networking stack that you created.
+
+  ALBStackName:
+    Type: String
+    Default: alb
+    Description: The name of the previously created ALB stack.
+
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment to provision.
+
+  HostedZoneName:
+    Type: String
+    Default: devopsa3.me.uk
+    Description: Project hosted zone name.
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: Must be valid EC2 instance type.
+
+  DesiredCapacity:
+    Type: String
+    Default: 1
+    Description: How many EC2 instances on startup.
+    ConstraintDescription: Must be less than MaxSize parameter.
+
+  MaxSize:
+    Type: String
+    Default: 3
+    Description: Maximum value of EC2 instances in group.
+
+  ECSAMI:
+    Type: AWS::EC2::Image::Id
+    Default: ami-097e3d1cdb541f43e
+    Description: Desired ECS-optimized AMI image.
+    ConstraintDescription: Must be valid ECS-optimized AMI image ID.
+
+Resources:
+
+  MainRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        HostedZoneId:
+          Fn::ImportValue: !Sub "${ALBStackName}-Associate-HostedZoneID"
+        DNSName:
+          Fn::ImportValue: !Sub "${ALBStackName}-ALB-DNSName"
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub '${HostedZoneName}.'
+      Type: A
+
+  WwwRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${HostedZoneName}.'
+      Name: !Sub 'www.${HostedZoneName}.'
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - Fn::ImportValue: !Sub "${ALBStackName}-ALB-DNSName"
+
+# ECS Resources
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+  # A security group for the containers we will run in ECS.
+  # Two rules, allowing network traffic from a public facing load
+  # balancer and from other members of the security group.
+  EcsHostSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP, HTTPS, SSH access
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: 'tcp'
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-SG"
+        - Key: 'Environment'
+          Value: !Ref Environment
+
+  EcsSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref 'EcsHostSecurityGroup'
+      IpProtocol: '-1'
+      SourceSecurityGroupId:
+        Fn::ImportValue: !Sub "${ALBStackName}-ALBSG-ARN"
+
+  EcsSecurityGroupIngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref 'EcsHostSecurityGroup'
+      IpProtocol: '-1'
+      SourceSecurityGroupId:
+        Fn::ImportValue: !Sub "${ALBStackName}-ALBSG-ARN"
+
+  # Autoscaling group. This launches the actual EC2 instances that will register
+  # themselves as members of the cluster, and run the docker containers.
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
+        - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
+      MinSize: '1'
+      MaxSize: !Ref 'MaxSize'
+      DesiredCapacity: !Ref 'DesiredCapacity'
+      HealthCheckType: EC2
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandBaseCapacity: 1
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: capacity-optimized
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref 'LaunchTemplate'
+            Version: '1'
+          Overrides:
+          - InstanceType: t3.micro
+          - InstanceType: t2.micro
+          - InstanceType: t3.small
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref 'DesiredCapacity'
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: true
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref ECSAMI
+        IamInstanceProfile:
+          Arn: !GetAtt
+               - EC2InstanceProfile
+               - Arn
+        InstanceType: !Ref 'InstanceType'
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds: [!Ref 'EcsHostSecurityGroup']
+        TagSpecifications:
+        - ResourceType: instance
+          Tags:
+          - Key: Name
+            Value: !Ref AWS::StackName
+          - Key: Environment
+            Value: !Ref Environment
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+            yum install -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+
+  ECSAutoScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ECSAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 60.0
+
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'application-autoscaling:*'
+              - 'cloudwatch:DescribeAlarms'
+              - 'cloudwatch:PutMetricAlarm'
+              - 'ecs:DescribeServices'
+              - 'ecs:UpdateService'
+            Resource: '*'
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+
+  # Role for the EC2 hosts. This allows the ECS agent on the EC2 hosts
+  # to communciate with the ECS control plane, as well as download the docker
+  # images from ECR to run on your host.
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'ecs:CreateCluster'
+              - 'ecs:DeregisterContainerInstance'
+              - 'ecs:DiscoverPollEndpoint'
+              - 'ecs:Poll'
+              - 'ecs:RegisterContainerInstance'
+              - 'ecs:StartTelemetrySession'
+              - 'ecs:Submit*'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetDownloadUrlForLayer'
+            Resource: '*'
+
+  # This is an IAM role which authorizes ECS to manage resources on your
+  # account on your behalf, such as updating your load balancer with the
+  # details of where your containers are, so that traffic can reach your
+  # containers.
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              # Rules which allow ECS to attach network interfaces to instances
+              # on your behalf in order for awsvpc networking mode to work right
+              - 'ec2:AttachNetworkInterface'
+              - 'ec2:CreateNetworkInterface'
+              - 'ec2:CreateNetworkInterfacePermission'
+              - 'ec2:DeleteNetworkInterface'
+              - 'ec2:DeleteNetworkInterfacePermission'
+              - 'ec2:Describe*'
+              - 'ec2:DetachNetworkInterface'
+
+              # Rules which allow ECS to update load balancers on your behalf
+              # with the information sabout how to send traffic to your containers
+              - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+              - 'elasticloadbalancing:DeregisterTargets'
+              - 'elasticloadbalancing:Describe*'
+              - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+              - 'elasticloadbalancing:RegisterTargets'
+            Resource: '*'
+
+  # This is a role which is used by the ECS tasks themselves.
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskExecutionRolePolicy
+          PolicyDocument:
+            Statement:
+            - Effect: Allow
+              Action:
+                # Allow the ECS Tasks to download images from ECR
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:GetDownloadUrlForLayer'
+                - 'ecr:BatchGetImage'
+
+                # Allow the ECS tasks to upload logs to CloudWatch
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
+
+Outputs:
+
+  ClusterName:
+    Description: The name of the ECS cluster
+    Value: !Ref 'ECSCluster'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]
+
+  ECSRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSRole' ] ]
+
+  ECSTaskExecutionRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSTaskExecutionRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRole' ] ]
+
+  EcsHostSecurityGroup:
+    Description: A security group used to allow containers to receive traffic
+    Value: !Ref 'EcsHostSecurityGroup'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'EcsHostSecurityGroup' ] ]

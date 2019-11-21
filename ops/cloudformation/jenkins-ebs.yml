@@ -1,6 +1,6 @@
 # Creates a EBS volume for Jenkins with retention policy for 5 daily snapshots.
 #
-# aws cloudformation deploy --template-file ebs-volume.yml --stack-name jenkins-ebs --capabilities CAPABILITY_IAM
+# aws cloudformation deploy --template-file jenkins-ebs.yml --stack-name jenkins-ebs --capabilities CAPABILITY_IAM
 #
 AWSTemplateFormatVersion: '2010-09-09'
 
