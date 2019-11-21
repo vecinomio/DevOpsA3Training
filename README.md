@@ -3,12 +3,12 @@
 
 ## Description:
 This instruction provides:
-  - how to create a VPC Stack with custom VPC.
-  - how to create an ALB Stack in custom VPC.
-  - how to create a Bastion Stack in custom VPC.
-  - how to create Jenkins and Jenkins-ebs stacks in custom VPC.
-  - how to create ECR-repo Stack in custom VPC.
-  - how to create ECS-cluster Stack in custom VPC.
+  - how to create a VPC Stack with custom VPC;
+  - how to create an ALB Stack in custom VPC;
+  - how to create a Bastion Stack in custom VPC;
+  - how to create Jenkins and Jenkins-ebs stacks in custom VPC;
+  - how to create ECR-repo Stack in custom VPC;
+  - how to create ECS-cluster Stack in custom VPC;
   - how to create ECS-task Stack in custom VPC.
 
 
