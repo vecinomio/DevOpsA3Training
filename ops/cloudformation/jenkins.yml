@@ -144,6 +144,10 @@ Resources:
                   - ecr:CompleteLayerUpload
                   - ecr:BatchCheckLayerAvailability
                   - ecr:PutImage
+                  - ecs:RegisterTaskDefinition
+                  - ecs:DescribeServices
+                  - ecs:CreateService
+                  - ecs:DeregisterTaskDefinition
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile

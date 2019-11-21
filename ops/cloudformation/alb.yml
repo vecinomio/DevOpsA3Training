@@ -113,6 +113,12 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-ARN'
+    AppLoadBalancerSG:
+      Description: 'SG of the ALB'
+      Value: !Ref ALBSecurityGroup
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-ALBSG-ARN'
     AppLoadBalancerDNSName:
       Description: 'The original DNS Name of the ALB'
       Value: !GetAtt AppLoadBalancer.DNSName
