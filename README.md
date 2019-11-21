@@ -66,7 +66,7 @@ This instruction provides:
 2. Set variables:
 
        $ SSLCertificateARN="" # Put your Certificate ARN in quotes.
-   - To get the certificate ARN:
+   To get the certificate ARN:
 
        $ aws acm list-certificates
 
