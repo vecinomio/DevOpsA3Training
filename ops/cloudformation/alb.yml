@@ -56,31 +56,6 @@
           - Key: 'Environment'
             Value: !Ref Environment
 
-    WebTargetGroup:
-      Type: AWS::ElasticLoadBalancingV2::TargetGroup
-      Properties:
-        HealthCheckIntervalSeconds: 10
-        HealthCheckPath: '/'
-        HealthCheckProtocol: HTTP
-        HealthCheckTimeoutSeconds: 5
-        HealthyThresholdCount: 2
-        UnhealthyThresholdCount: 2
-        Matcher:
-          HttpCode: '200-299'
-        Name: tgWeb
-        Port: 8080
-        Protocol: HTTP
-        TargetType: instance
-        VpcId:
-          Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
-        Tags:
-        - Key: 'Name'
-          Value: 'tgWeb'
-        - Key: 'Port'
-          Value: '8080'
-        - Key: 'Environment'
-          Value: !Ref Environment
-
     HttpListener:
       Type: AWS::ElasticLoadBalancingV2::Listener
       Properties:
@@ -101,7 +76,7 @@
           - CertificateArn: !Ref SSLCertificateARN
         DefaultActions:
           - Type: forward
-            TargetGroupArn: !Ref WebTargetGroup
+            TargetGroupArn: !Ref BlankTargetGroup
         LoadBalancerArn: !Ref AppLoadBalancer
         Port: 443
         Protocol: HTTPS
@@ -137,9 +112,3 @@
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-Associate-HostedZoneID'
-    tgWebARN:
-      Description: 'ARN of the Target Group Web'
-      Value: !Ref WebTargetGroup
-      Export:
-        Type: String
-        Name: !Sub '${AWS::StackName}-tgWeb-ARN'
