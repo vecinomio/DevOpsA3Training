@@ -244,7 +244,7 @@ Resources:
       HealthyThresholdCount: 2
       TargetType: ip
       Matcher:
-        HttpCode: '200-499'
+        HttpCode: '200-299'
       Name: !Ref 'ServiceName'
       Port: !Ref 'ContainerPort'
       Protocol: HTTP
@@ -301,10 +301,10 @@ Resources:
           - Type: forward
            ForwardConfig:
              TargetGroups:
-             - TargetGroupArn: !Ref TargetGroup
+             - TargetGroupArn: !Ref TargetGroupBlue
                Weight: !Ref BlueWeight
              - TargetGroupArn: !Ref TargetGroupGreen
-               Weight: !GreenWeight
+               Weight: !Ref GreenWeight
              TargetGroupStickinessConfig:
                Enabled: true
                DurationSeconds: 2000
