@@ -168,8 +168,8 @@ Resources:
           TargetGroupArn:
             Fn::If:
               - 'IsDeploymentBlue'
-              - !Ref 'TargetGroupBlue'
-              - !Ref 'TargetGroupGreen'
+              - Fn::ImportValue: !Sub "${ALBStackName}-TargetGroupBlue"
+              - Fn::ImportValue: !Sub "${ALBStackName}-TargetGroupGreen"
 
   ScalableTargetRole:
     Type: 'AWS::IAM::Role'
@@ -227,91 +227,6 @@ Resources:
         ScaleInCooldown: 5
         ScaleOutCooldown: 5
         TargetValue: 60
-
-  # A target group. This is used for keeping track of all the tasks, and
-  # what IP addresses / port numbers they have. You can query it yourself,
-  # to use the addresses yourself, but most often this target group is just
-  # connected to an application load balancer, or network load balancer, so
-  # it can automatically distribute traffic across all the targets.
-  TargetGroupBlue:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Condition: IsDeploymentBlue
-    Properties:
-      HealthCheckIntervalSeconds: 11
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 10
-      HealthyThresholdCount: 2
-      TargetType: ip
-      Matcher:
-        HttpCode: '200-299'
-      Name: !Ref 'ServiceName'
-      Port: !Ref 'ContainerPort'
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId:
-        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
-      Tags:
-      - Key: 'Name'
-        Value: !Sub 'tg${AWS::StackName}'
-      - Key: 'Environment'
-        Value: !Ref Environment
-
-  TargetGroupGreen:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Condition: IsDeploymentBlue
-    Properties:
-      HealthCheckIntervalSeconds: 11
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 10
-      HealthyThresholdCount: 2
-      TargetType: ip
-      Matcher:
-        HttpCode: '200-299'
-      Name: !Ref 'ServiceName'
-      Port: !Ref 'ContainerPort'
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId:
-        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
-
-    HttpListener:
-      Type: AWS::ElasticLoadBalancingV2::Listener
-      Condition: IsDeploymentBlue
-      Properties:
-        DefaultActions:
-          - Type: redirect
-            RedirectConfig:
-              Protocol: HTTPS
-              Port: '443'
-              StatusCode: HTTP_301
-        LoadBalancerArn:
-          Fn::ImportValue: !Sub "${ALBStackName}:-ALB-ARN"
-        Port: 80
-        Protocol: HTTP
-
-    HttpsListener:
-      Type: 'AWS::ElasticLoadBalancingV2::Listener'
-      Condition: IsDeploymentBlue
-      Properties:
-        Certificates:
-          - CertificateArn: !Ref SSLCertificateARN
-        DefaultActions:
-          - Type: forward
-           ForwardConfig:
-             TargetGroups:
-             - TargetGroupArn: !Ref TargetGroupBlue
-               Weight: !Ref BlueWeight
-             - TargetGroupArn: !Ref TargetGroupGreen
-               Weight: !Ref GreenWeight
-             TargetGroupStickinessConfig:
-               Enabled: true
-               DurationSeconds: 2000
-        LoadBalancerArn:
-          Fn::ImportValue: !Sub "${ALBStackName}:-ALB-ARN"
-        Port: 443
-        Protocol: HTTPS
 
   # Create a rule on the load balancer for routing traffic to the target group
   LoadBalancerRule:
