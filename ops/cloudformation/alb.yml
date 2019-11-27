@@ -31,6 +31,20 @@ Parameters:
     Default: 0
     Description: Green target group weight. 0% by default. This parameter is on canary deployment abidance.
 
+  Path:
+    Type: String
+    Default: "*"
+    Description: A path on the public load balancer that this service
+                 should be connected to. Use * to send all load balancer
+                 traffic to this service.
+
+  Priority:
+    Type: Number
+    Default: 2
+    Description: The priority for the routing rule added to the load balancer.
+                 This only applies if your have multiple services which have been
+                 assigned to different paths on the load balancer.
+
 Resources:
   ALBSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
@@ -97,7 +111,7 @@ Resources:
               - TargetGroupArn: !Ref TargetGroupGreen
                 Weight: !Ref GreenWeight
               TargetGroupStickinessConfig:
-                Enabled: true
+                Enabled: false
                 DurationSeconds: 2000
         LoadBalancerArn: !Ref AppLoadBalancer
         Port: 443
@@ -142,6 +156,27 @@ Resources:
       VpcId:
         Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
 
+  # Create a rule on the load balancer for routing traffic to the target group
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref 'Path']
+      ListenerArn: !Ref HttpsListener
+      Priority: !Ref 'Priority'
+      Actions:
+      - Type: forward
+        ForwardConfig:
+          TargetGroupStickinessConfig:
+            Enabled: false
+            DurationSeconds: 2000
+          TargetGroups:
+          - TargetGroupArn: !Ref TargetGroupBlue
+            Weight: !Ref BlueWeight
+          - TargetGroupArn: !Ref TargetGroupGreen
+            Weight: !Ref GreenWeight
+
 Outputs:
 
     AppLoadBalancerARN:
@@ -184,11 +219,11 @@ Outputs:
       Value: !Ref TargetGroupBlue
       Export:
         Type: String
-        Name: 'BlueTargetGroup-ARN'
+        Name: !Sub '${AWS::StackName}-TargetGroupBlue'
 
     TargetGroupGreen:
       Description: 'ARN of the green target group'
       Value: !Ref TargetGroupGreen
       Export:
         Type: String
-        Name: 'GreenTargetGroup-ARN'
+        Name: !Sub '${AWS::StackName}-TargetGroupGreen'

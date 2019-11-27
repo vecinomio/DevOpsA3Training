@@ -53,10 +53,15 @@ Parameters:
     Description: How many EC2 instances on startup.
     ConstraintDescription: Must be less than MaxSize parameter.
 
+  MinSize:
+    Type: String
+    Default: 2
+    Description: Minimum value of EC2 instances in cluster.
+
   MaxSize:
     Type: String
-    Default: 3
-    Description: Maximum value of EC2 instances in group.
+    Default: 10
+    Description: Maximum value of EC2 instances in cluster.
 
   ECSAMI:
     Type: AWS::EC2::Image::Id
@@ -142,7 +147,7 @@ Resources:
       VPCZoneIdentifier:
         - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet0"
         - Fn::ImportValue: !Sub "${VPCStackName}-PrivateSubnet1"
-      MinSize: '1'
+      MinSize: !Ref 'MinSize'
       MaxSize: !Ref 'MaxSize'
       DesiredCapacity: !Ref 'DesiredCapacity'
       HealthCheckType: EC2
