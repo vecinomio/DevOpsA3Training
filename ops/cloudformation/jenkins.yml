@@ -30,7 +30,7 @@ Parameters:
   InstanceType:
     Type: String
     Description: Type of EC2 instance
-    Default: t2.micro
+    Default: t3.small
     ConstraintDescription: Must be a valid EC2 instance type.
 
   S3Path:
@@ -118,6 +118,7 @@ Resources:
                   - cloudformation:DescribeStacks
                   - cloudformation:GetTemplateSummary
                   - iam:CreateInstanceProfile
+                  - iam:GetRole
                   - iam:CreateRole
                   - iam:DeleteRolePolicy
                   - iam:DeleteRole
@@ -137,6 +138,11 @@ Resources:
                   - autoscaling:DeletePolicy
                   - autoscaling:DeleteAutoScalingGroup
                   - autoscaling:DeleteLaunchConfiguration
+                  - application-autoscaling:DescribeScalableTargets
+                  - application-autoscaling:RegisterScalableTarget
+                  - application-autoscaling:DeregisterScalableTarget
+                  - application-autoscaling:DescribeScalingPolicies
+                  - application-autoscaling:PutScalingPolicy
                   - ec2:DescribeInstances
                   - ec2:DescribeTags
                   - ec2:DescribeSnapshots
@@ -172,6 +178,8 @@ Resources:
                   - ecs:DescribeServices
                   - ecs:CreateService
                   - ecs:DeregisterTaskDefinition
+                  - ecs:UpdateService
+                  - ecs:DeleteService
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
