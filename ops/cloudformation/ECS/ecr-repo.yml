@@ -9,7 +9,7 @@ Parameters:
 
   repositoryName:
     Type: String
-    Default: 'devopsa3'
+    Default: 'snakes'
     Description: The name to use for the repository.
 
   registryId:

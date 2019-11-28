@@ -49,7 +49,7 @@ Parameters:
 
   DesiredCapacity:
     Type: String
-    Default: 1
+    Default: 2
     Description: How many EC2 instances on startup.
     ConstraintDescription: Must be less than MaxSize parameter.
 

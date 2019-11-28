@@ -23,15 +23,12 @@ Parameters:
 
   ServiceName:
     Type: String
-    Default: dropwizard
-#    Default: snakes
+    Default: snakes
     Description: A name for the service.
 
   ImageUrl:
     Type: String
-    Default: 054017840000.dkr.ecr.us-east-1.amazonaws.com/devopsa3:tomcat
-#    Default: 054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:latest
-#    Default: 054017840000.dkr.ecr.us-east-1.amazonaws.com/aveli-test:latest
+    Default: 054017840000.dkr.ecr.us-east-1.amazonaws.com/snakes:latest
     Description: The url of a docker image that contains the application process that
                  will handle the traffic for this service
 
@@ -83,6 +80,7 @@ Parameters:
 Conditions:
 
   HasCustomRole: !Not [ !Equals [!Ref 'Role', ''] ]
+
   IsDeploymentBlue: !Equals [!Ref 'DeploymentColor', 'Blue']
 
 Resources:
@@ -196,6 +194,6 @@ Resources:
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
-        ScaleInCooldown: 10
+        ScaleInCooldown: 5
         ScaleOutCooldown: 10
         TargetValue: 60
