@@ -13,32 +13,39 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "ASG for private subnet."
 
 Parameters:
+
   VPCStackName:
     Type: String
     AllowedValues: [ DevVPC, ProdVPC ]
+
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: 'AWS::EC2::KeyPair::KeyName'
     Default: devopsa3
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
   InstanceType:
     Type: String
     Description: Type of EC2 instance.
     Default: t2.micro
     ConstraintDescription: Must be a valid EC2 instance type.
+
   WebASGCapacity:
     Description: The number of ec2 instances will be runned into ASG
     Type: String
     Default: "2"
     ConstraintDescription: Must be positive integer or zero
+
   S3Path:
     Type: String
     Description: The S3 path
     Default: devopsa3
+
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
     Default: '0.0.1'
+
   HostedZoneName:
     Type: String
     Description: Project hosted zone name.
@@ -49,6 +56,7 @@ Mappings:
       AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
     us-west-1:
       AMI: ami-0245d318c6788de52 # Amazon Linux 2
+
 
 Resources:
   webAutoScalingSecurityGroup:
