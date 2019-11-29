@@ -44,7 +44,6 @@ Parameters:
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
-    Default: '0.0.1'
 
   HostedZoneName:
     Type: String
@@ -163,7 +162,6 @@ Resources:
           }
           hostnamectl set-hostname webserver
           retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
-          retryCommand 5 10 "yum -y update"
           retryCommand 5 10 'yum install -y puppet-agent'
           export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
           retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
