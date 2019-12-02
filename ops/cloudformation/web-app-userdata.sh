@@ -19,7 +19,7 @@ hostnamectl set-hostname webserver
 retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
 retryCommand 5 10 'yum install -y puppet-agent'
 export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
-aws s3 cp "s3://$S3PATH/scripts/puppet-$PUPVER.tar" .
+aws s3 cp "s3://$S3PATH/puppet-$PUPVER.tar" .
 retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-$PUPVER.tar'
 retryCommand 5 10 'gem install r10k'
 retryCommand 5 10 'r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'

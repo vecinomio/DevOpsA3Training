@@ -39,7 +39,7 @@ Parameters:
   S3Path:
     Type: String
     Description: The S3 path
-    Default: devopsa3
+    Default: devopsa3/scripts
 
   PuppetScriptVersion:
     Type: String
@@ -150,7 +150,7 @@ Resources:
         Fn::Base64: !Sub
         - |
           #!/bin/bash
-          aws s3 cp "s3://${S3Path}/scripts/web-app-userdata.sh" .
+          aws s3 cp "s3://${S3Path}/web-app-userdata.sh" .
           /bin/bash web-app-userdata.sh ${S3Path} ${pupver} ${AWS::StackName} ${AWS::Region}
           rm web-app-userdata.sh
         - pupver: !Ref PuppetScriptVersion
