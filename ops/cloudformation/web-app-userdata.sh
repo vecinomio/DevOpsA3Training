@@ -1,9 +1,9 @@
 #!/bin/bash
 
-S3Path=$1
-pupver=$2
-AWSStackName=$3
-AWSRegion=$4
+S3PATH=$1
+PUPVER=$2
+AWSSTACKNAME=$3
+AWSREGION=$4
 
 function retryCommand() {
   local ATTEMPTS="$1"
@@ -15,16 +15,15 @@ function retryCommand() {
   done
   return 1
 }
-
 hostnamectl set-hostname webserver
 retryCommand 5 10 'rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm'
 retryCommand 5 10 'yum install -y puppet-agent'
 export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
-aws s3 cp "s3://$S3Path/scripts/puppet-$pupver.tar" .
-retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-$pupver.tar'
+aws s3 cp "s3://$S3PATH/scripts/puppet-$PUPVER.tar" .
+retryCommand 5 10 'tar -C /etc/puppetlabs/ -xvf puppet-$PUPVER.tar'
 retryCommand 5 10 'gem install r10k'
 retryCommand 5 10 'r10k -v info puppetfile install --puppetfile=/etc/puppetlabs/Puppetfile'
 retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp
                  [ $? == 2 -o $? == 0 ] && return 0'
 retryCommand 5 10 'curl -sS http://localhost:8080/index.jsp | grep "Elastic Beanstalk"'
-cfn-signal -e $? --stack $AWSStackName --resource webAppASG --region $AWSRegion
+cfn-signal -e $? --stack $AWSSTACKNAME --resource webAppASG --region $AWSREGION
