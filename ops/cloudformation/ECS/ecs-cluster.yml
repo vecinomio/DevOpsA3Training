@@ -96,6 +96,13 @@ Resources:
 # ECS Resources
   ECSCluster:
     Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "${AWS::StackName}"
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}"
+        - Key: 'Environment'
+          Value: !Ref Environment
 
   # A security group for the containers we will run in ECS.
   # Two rules, allowing network traffic from a public facing load

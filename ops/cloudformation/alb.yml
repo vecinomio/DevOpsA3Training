@@ -1,5 +1,9 @@
 # To Create ALB Stack:
-# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
+# aws cloudformation deploy --stack-name alb \
+#                           --template-file ops/cloudformation/alb.yml \
+#                           --parameter-overrides VPCStackName=${VPCStackName} \
+#                                                 Environment=${Environment} \
+#                                                 SSLCertificateARN=${SSLCertificateARN}
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
@@ -120,6 +124,7 @@ Resources:
   TargetGroupBlue:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      Name: !Sub '${AWS::StackName}-Blue'
       HealthCheckIntervalSeconds: 11
       HealthCheckPath: /
       HealthCheckProtocol: HTTP
@@ -142,6 +147,7 @@ Resources:
   TargetGroupGreen:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      Name: !Sub '${AWS::StackName}-Green'
       HealthCheckIntervalSeconds: 11
       HealthCheckPath: /
       HealthCheckProtocol: HTTP
