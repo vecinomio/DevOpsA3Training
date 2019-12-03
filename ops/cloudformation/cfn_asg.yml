@@ -127,7 +127,7 @@ Resources:
       - Key: 'Name'
         Value: 'tgWeb'
       - Key: 'Port'
-        Value: 8080
+        Value: '8080'
 
   WebListenerRule:
     Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
