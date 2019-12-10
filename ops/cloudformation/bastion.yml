@@ -7,42 +7,34 @@
                 Attaches EIP and Persistent Storage to it.'
 
   Parameters:
-
     VPCStackName:
       Type: String
       AllowedValues: [ DevVPC, ProdVPC ]
-
     KeyName:
       Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
       Type: 'AWS::EC2::KeyPair::KeyName'
       Default: devopsa3
       ConstraintDescription: must be the name of an existing EC2 KeyPair.
-
     InstanceType:
       Type: String
       Description: Type of EC2 instance.
       Default: t2.micro
       AllowedValues: [ t2.micro, t2.small, t2.medium ]
       ConstraintDescription: Must be a valid EC2 instance type.
-
     VolumeSize:
       Type: Number
       Description: Volume-size of persistent EBS for Bastion-host in Gb
       Default: 10
-
     HostedZoneName:
       Type: String
       Description: Project hosted zone.
-
     DesiredCapacity:
       Type: Number
       Description: Desired number of instances in ASG.
       Default: 1
-
     Environment:
       Type: String
       Description: Dev or Prod
-
 
   Mappings:
     RegionMap:
@@ -50,7 +42,6 @@
         AMI: ami-0b69ea66ff7391e80 # Amazon Linux 2
       us-west-1:
         AMI: ami-0245d318c6788de52 # Amazon Linux 2
-
 
   Resources:
     BastionSecurityGroup:
