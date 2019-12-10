@@ -104,3 +104,9 @@ This instruction provides:
 3. Validate cfn_asg template and Create webApp Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/cfn_asg.yml
    - aws cloudformation deploy --stack-name aveli-webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName==${VPCStackName} HostedZoneName=${HostedZoneName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
+
+# To create ECS Stack:
+1. Validate ecs-cluster template and Create ECS-cluster Stack:
+
+   - aws cloudformation validate-template --template-body file://ops/cloudformation/ECS/ecs-cluster.yml
+   - aws cloudformation deploy --stack-name ECS-cluster --template-file ops/cloudformation/ECS/ecs-cluster.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_IAM
