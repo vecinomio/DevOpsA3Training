@@ -125,14 +125,6 @@ function get_jenkins_data_volume() {
 }
 
 #-------------------------------------------------------------------------------
-# Set hostname.
-# @param $1 - The desired hostname of the server.
-#-------------------------------------------------------------------------------
-function set_hostname() {
-  hostnamectl set-hostname "${1}"
-}
-
-#-------------------------------------------------------------------------------
 # Attach EBS volume and setup to create backup snapshots
 # @param $1 - Volume ID
 # @param $2 - Device for mount EBS volume
@@ -236,25 +228,15 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
-# Set hostname, mount or create volume
+# Set mount or create volume
 #-------------------------------------------------------------------------------
 function main() {
   local region=$(get_ec2_instance_region)
-  local hostname=""
-
-    while [[ ${#} -gt 0 ]]; do
-    case "${1}" in
-      --hostname)               hostname="${2}"
-                                shift 2 ;;
-      *)                        error Unrecognized option "${1}" ;;
-    esac
-  done
 
   wait_until yum update -y
 
-  set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
-  yum reinstall -y aws-cli aws-cfn-bootstrap docker
+
   usermod -aG docker jenkins
   systemctl enable docker
   systemctl start docker
