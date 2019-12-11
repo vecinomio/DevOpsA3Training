@@ -10,6 +10,7 @@ This instruction provides:
   - how to create a Bastion Stack in custom VPC.
   - how to create Jenkins and Jenkins-ebs stacks in custom VPC.
   - how to create WebApp stack in custom VPC.
+  - how to create ECS cluster stack in custom VPC.
 
 
 ## Expected results:
@@ -39,6 +40,7 @@ This instruction provides:
   * The number of VM instances are scaling depends on traffic load
   * If one WebApp server falls, ASG will create new one.
 
+- ECS Cluster with ASG for container instances.
 
 # To create VPC Stack:
 1. Clone repository from github:
@@ -104,6 +106,7 @@ This instruction provides:
 3. Validate cfn_asg template and Create webApp Stack:
    - aws cloudformation validate-template --template-body file://ops/cloudformation/cfn_asg.yml
    - aws cloudformation deploy --stack-name aveli-webAppASG --template-file ops/cloudformation/cfn_asg.yml --parameter-overrides VPCStackName==${VPCStackName} HostedZoneName=${HostedZoneName} PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_NAMED_IAM
+
 
 # To create ECS Stack:
 1. Validate ecs-cluster template and Create ECS-cluster Stack:
