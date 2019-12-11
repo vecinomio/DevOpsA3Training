@@ -158,7 +158,7 @@ This instruction provides:
 
        $ aws cloudformation validate-template --template-body file://ops/cloudformation/ECS/ecs-cluster.yml
 
-       $ aws cloudformation deploy --stack-name ECS-cluster --template-file ops/cloudformation/ECS/ecs-cluster.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} --capabilities CAPABILITY_IAM
+       $ aws cloudformation deploy --stack-name ECS-cluster --template-file ops/cloudformation/ECS/ecs-cluster.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} Environment=${Environment} ECSAMI=${ECSAMI} --capabilities CAPABILITY_IAM
 
 5. Validate ecs-task template and Create ECS-task Stack:*
 
