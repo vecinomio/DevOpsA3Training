@@ -254,7 +254,11 @@ function main() {
 
   set_hostname ${hostname}
   mount_jenkins_data_volume ${region}
-  yum reinstall -y aws-cli aws-cfn-bootstrap
+  yum reinstall -y aws-cli aws-cfn-bootstrap docker
+  usermod -aG docker jenkins
+  systemctl enable docker
+  systemctl start docker
+  systemctl restart jenkins
 }
 
 main "${@}"
