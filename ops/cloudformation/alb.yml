@@ -1,24 +1,56 @@
 # To Create ALB Stack:
-# aws cloudformation deploy --stack-name alb --template-file ops/cloudformation/alb.yml --parameter-overrides VPCStackName=${VPCStackName} Environment=${Environment} SSLCertificateARN=${SSLCertificateARN}
-  AWSTemplateFormatVersion: "2010-09-09"
+# aws cloudformation deploy --stack-name alb \
+#                           --template-file ops/cloudformation/alb.yml \
+#                           --parameter-overrides VPCStackName=${VPCStackName} \
+#                                                 Environment=${Environment} \
+#                                                 SSLCertificateARN=${SSLCertificateARN}
+---
+AWSTemplateFormatVersion: "2010-09-09"
 
-  Description: "Creates: ALB Security Group, App Load Balacer,
+Description: "Creates: ALB Security Group, App Load Balancer,
                 Default Target Group, ALB Listeners"
 
-  Parameters:
-    VPCStackName:
-      Type: String
-      AllowedValues: [ DevVPC, ProdVPC ]
-    Environment:
-      Type: String
-      Description: Dev or Prod
-      AllowedValues: [ Dev, Prod ]
-    SSLCertificateARN:
-      Type: String
-      Description: ARN of existing SSL Certificate.
+Parameters:
 
-  Resources:
-    ALBSecurityGroup:
+  VPCStackName:
+    Type: String
+    AllowedValues: [ DevVPC, ProdVPC ]
+
+  Environment:
+    Type: String
+    Description: Dev or Prod
+    AllowedValues: [ Dev, Prod ]
+
+  SSLCertificateARN:
+    Type: String
+    Description: ARN of existing SSL Certificate.
+
+  BlueWeight:
+    Type: String
+    Default: 1
+    Description: Blue target group weight. 100% by default. This parameter is on canary deployment abidance.
+
+  GreenWeight:
+    Type: String
+    Default: 0
+    Description: Green target group weight. 0% by default. This parameter is on canary deployment abidance.
+
+  Path:
+    Type: String
+    Default: "*"
+    Description: A path on the public load balancer that this service
+                 should be connected to. Use * to send all load balancer
+                 traffic to this service.
+
+  Priority:
+    Type: Number
+    Default: 3
+    Description: The priority for the routing rule added to the load balancer.
+                 This only applies if your have multiple services which have been
+                 assigned to different paths on the load balancer.
+
+Resources:
+  ALBSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
         GroupDescription: Enable HTTP and HTTPS access via ports 80 and 443
@@ -39,7 +71,7 @@
           - Key: 'Environment'
             Value: !Ref Environment
 
-    AppLoadBalancer:
+  AppLoadBalancer:
       Type: AWS::ElasticLoadBalancingV2::LoadBalancer
       Properties:
         IpAddressType: 'ipv4'
@@ -56,32 +88,7 @@
           - Key: 'Environment'
             Value: !Ref Environment
 
-    WebTargetGroup:
-      Type: AWS::ElasticLoadBalancingV2::TargetGroup
-      Properties:
-        HealthCheckIntervalSeconds: 10
-        HealthCheckPath: '/'
-        HealthCheckProtocol: HTTP
-        HealthCheckTimeoutSeconds: 5
-        HealthyThresholdCount: 2
-        UnhealthyThresholdCount: 2
-        Matcher:
-          HttpCode: '200-299'
-        Name: tgWeb
-        Port: 8080
-        Protocol: HTTP
-        TargetType: instance
-        VpcId:
-          Fn::ImportValue: !Sub '${VPCStackName}-VPCId'
-        Tags:
-        - Key: 'Name'
-          Value: 'tgWeb'
-        - Key: 'Port'
-          Value: '8080'
-        - Key: 'Environment'
-          Value: !Ref Environment
-
-    HttpListener:
+  HttpListener:
       Type: AWS::ElasticLoadBalancingV2::Listener
       Properties:
         DefaultActions:
@@ -94,46 +101,135 @@
         Port: 80
         Protocol: HTTP
 
-    HttpsListener:
+  HttpsListener:
       Type: 'AWS::ElasticLoadBalancingV2::Listener'
       Properties:
         Certificates:
           - CertificateArn: !Ref SSLCertificateARN
         DefaultActions:
           - Type: forward
-            TargetGroupArn: !Ref WebTargetGroup
+            ForwardConfig:
+              TargetGroups:
+              - TargetGroupArn: !Ref TargetGroupBlue
+                Weight: !Ref BlueWeight
+              - TargetGroupArn: !Ref TargetGroupGreen
+                Weight: !Ref GreenWeight
+              TargetGroupStickinessConfig:
+                Enabled: false
+                DurationSeconds: 2000
         LoadBalancerArn: !Ref AppLoadBalancer
         Port: 443
         Protocol: HTTPS
 
-  Outputs:
+  TargetGroupBlue:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-Blue'
+      HealthCheckIntervalSeconds: 11
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Matcher:
+        HttpCode: '200-299'
+      Port: 8080
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+      Tags:
+      - Key: 'Name'
+        Value: !Sub 'tg${AWS::StackName}'
+      - Key: 'Environment'
+        Value: !Ref Environment
+
+  TargetGroupGreen:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-Green'
+      HealthCheckIntervalSeconds: 11
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Matcher:
+        HttpCode: '200-299'
+      Port: 8080
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId:
+        Fn::ImportValue: !Sub "${VPCStackName}-VPCId"
+
+  # Create a rule on the load balancer for routing traffic to the target group
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref 'Path']
+      ListenerArn: !Ref HttpsListener
+      Priority: !Ref 'Priority'
+      Actions:
+      - Type: forward
+        ForwardConfig:
+          TargetGroupStickinessConfig:
+            Enabled: false
+            DurationSeconds: 2000
+          TargetGroups:
+          - TargetGroupArn: !Ref TargetGroupBlue
+            Weight: !Ref BlueWeight
+          - TargetGroupArn: !Ref TargetGroupGreen
+            Weight: !Ref GreenWeight
+
+Outputs:
+
     AppLoadBalancerARN:
       Description: 'ARN of the ALB'
       Value: !Ref AppLoadBalancer
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-ARN'
+
+    AppLoadBalancerSG:
+      Description: 'SG of the ALB'
+      Value: !Ref ALBSecurityGroup
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-ALBSG-ARN'
+
     AppLoadBalancerDNSName:
       Description: 'The original DNS Name of the ALB'
       Value: !GetAtt AppLoadBalancer.DNSName
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-ALB-DNSName'
+
     AppLoadBalancerHTTPSListenerARN:
       Description: 'The ARN of the ALB HTTPS Listener'
       Value: !Ref HttpsListener
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-HttpsListener-ARN'
+
     HostedZoneID:
       Description: 'The ID of the Hosted Zone associated with the ALB'
       Value: !GetAtt AppLoadBalancer.CanonicalHostedZoneID
       Export:
         Type: String
         Name: !Sub '${AWS::StackName}-Associate-HostedZoneID'
-    tgWebARN:
-      Description: 'ARN of the Target Group Web'
-      Value: !Ref WebTargetGroup
+
+    TargetGroupBlue:
+      Description: 'ARN of the blue target group'
+      Value: !Ref TargetGroupBlue
       Export:
         Type: String
-        Name: !Sub '${AWS::StackName}-tgWeb-ARN'
+        Name: !Sub '${AWS::StackName}-TargetGroupBlue'
+
+    TargetGroupGreen:
+      Description: 'ARN of the green target group'
+      Value: !Ref TargetGroupGreen
+      Export:
+        Type: String
+        Name: !Sub '${AWS::StackName}-TargetGroupGreen'
