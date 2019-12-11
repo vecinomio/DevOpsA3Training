@@ -34,7 +34,6 @@ Parameters:
 
   Environment:
     Type: String
-    Default: dev
     Description: Environment to provision.
 
   HostedZoneName:
@@ -65,7 +64,6 @@ Parameters:
 
   ECSAMI:
     Type: AWS::EC2::Image::Id
-    Default: ami-097e3d1cdb541f43e
     Description: Desired ECS-optimized AMI image.
     ConstraintDescription: Must be valid ECS-optimized AMI image ID.
 
@@ -349,22 +347,22 @@ Outputs:
     Description: The name of the ECS cluster
     Value: !Ref 'ECSCluster'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]
+      Name: !Sub "${AWS::StackName}:ClusterName"
 
   ECSRole:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ECSRole.Arn'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSRole' ] ]
+      Name: !Sub "${AWS::StackName}:ECSRole"
 
   ECSTaskExecutionRole:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ECSTaskExecutionRole.Arn'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRole' ] ]
+      Name: !Sub "${AWS::StackName}:ECSTaskExecutionRole"
 
   EcsHostSecurityGroup:
     Description: A security group used to allow containers to receive traffic
     Value: !Ref 'EcsHostSecurityGroup'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'EcsHostSecurityGroup' ] ]
+      Name: !Sub "${AWS::StackName}:EcsHostSecurityGroup"
