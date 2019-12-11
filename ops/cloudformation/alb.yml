@@ -7,7 +7,7 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "Creates: ALB Security Group, App Load Balacer,
+Description: "Creates: ALB Security Group, App Load Balancer,
                 Default Target Group, ALB Listeners"
 
 Parameters:
@@ -28,7 +28,7 @@ Parameters:
   BlueWeight:
     Type: String
     Default: 1
-    Description: Green target group weight. 100% by default. This parameter is on canary deployment abidance.
+    Description: Blue target group weight. 100% by default. This parameter is on canary deployment abidance.
 
   GreenWeight:
     Type: String
