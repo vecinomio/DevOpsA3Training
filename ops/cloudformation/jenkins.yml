@@ -1,44 +1,68 @@
 # Creates an ASG 1:1 for Jenkins, attaching or creating persistent volume.
-# aws cloudformation deploy --stack-name Jenkins --template-file ops/cloudformation/jenkins.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 --capabilities CAPABILITY_IAM
+#
+# aws cloudformation deploy --stack-name Jenkins --template-file ops/cloudformation/jenkins.yml \
+#                           --parameter-overrides VPCStackName=${VPCStackName} ALBStackName=${ALBStackName} \
+#                                                 HostedZoneName=${HostedZoneName} \
+#                                MountScriptVersion=0.0.1 PuppetScriptVersion=0.0.1 Priority=1 \
+#                           --capabilities CAPABILITY_IAM
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: "Creates: Jenkins Security Group, Jenkins Role, Jenkins Profile,
               Jenkins LaunchConfig and Jenkins AutoScalingGroup."
 
 Parameters:
+
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of the SSH keypair to use for the EC2 instances.
     Default: devopsa3
+
   VPCStackName:
     Type: String
+    Description: Created VPC stack name.
     MinLength: 1
+
+  ALBStackName:
+    Type: String
+    Description: Created ALB stack name.
+    MinLength: 1
+
   InstanceType:
     Type: String
     Description: Type of EC2 instance
-    Default: t2.micro
+    Default: t3.small
     ConstraintDescription: Must be a valid EC2 instance type.
+
   S3Path:
     Type: String
     Description: The S3 path
     Default: devopsa3
+
   MountScriptVersion:
     Type: String
     Description: Bootstrap script version for mounting volume
+
   PuppetScriptVersion:
     Type: String
     Description: Bootstrap script version
+
   Service:
     Type: String
     Description: lifecycle policy tag
     Default: jenkins
+
   Environment:
     Type: String
     Description: Normally - ci
     Default: ci
+
   HostedZoneName:
     Type: String
     Description: Project hosted zone name.
+
+  Priority:
+    Type: String
+    Description: Listener rule priority.
 
 Mappings:
   RegionMap:
@@ -94,6 +118,7 @@ Resources:
                   - cloudformation:DescribeStacks
                   - cloudformation:GetTemplateSummary
                   - iam:CreateInstanceProfile
+                  - iam:GetRole
                   - iam:CreateRole
                   - iam:DeleteRolePolicy
                   - iam:DeleteRole
@@ -113,6 +138,11 @@ Resources:
                   - autoscaling:DeletePolicy
                   - autoscaling:DeleteAutoScalingGroup
                   - autoscaling:DeleteLaunchConfiguration
+                  - application-autoscaling:DescribeScalableTargets
+                  - application-autoscaling:RegisterScalableTarget
+                  - application-autoscaling:DeregisterScalableTarget
+                  - application-autoscaling:DescribeScalingPolicies
+                  - application-autoscaling:PutScalingPolicy
                   - ec2:DescribeInstances
                   - ec2:DescribeTags
                   - ec2:DescribeSnapshots
@@ -138,6 +168,18 @@ Resources:
                   - route53:ListHostedZones
                   - route53:ChangeResourceRecordSets
                   - route53:GetChange
+                  - ecr:GetAuthorizationToken
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:PutImage
+                  - ecs:RegisterTaskDefinition
+                  - ecs:DescribeServices
+                  - ecs:CreateService
+                  - ecs:DeregisterTaskDefinition
+                  - ecs:UpdateService
+                  - ecs:DeleteService
 
   JenkinsProfile:
     Type: AWS::IAM::InstanceProfile
@@ -154,7 +196,7 @@ Resources:
       Type: CNAME
       TTL: '300'
       ResourceRecords:
-        - Fn::ImportValue: alb-ALB-DNSName
+        - Fn::ImportValue: !Sub "${ALBStackName}-ALB-DNSName"
 
   JenkinsTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -177,7 +219,7 @@ Resources:
       - Key: 'Name'
         Value: !Sub 'tg${AWS::StackName}'
       - Key: 'Port'
-        Value: 8080
+        Value: '8080'
       - Key: 'Environment'
         Value: !Ref Environment
 
@@ -192,8 +234,9 @@ Resources:
           HostHeaderConfig:
             Values:
               - !Sub 'ci.${HostedZoneName}'
-      ListenerArn: !ImportValue alb-HttpsListener-ARN
-      Priority: 1
+      ListenerArn:
+        Fn::ImportValue: !Sub "${ALBStackName}-HttpsListener-ARN"
+      Priority: !Ref Priority
 
   JenkinsLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -219,14 +262,19 @@ Resources:
                     [ $? == 2 -o $? == 0 ] && break
                 done
             }
-            retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
+            hostnamectl set-hostname jenkins
             rpm -Uvh https://yum.puppet.com/puppet5-release-el-7.noarch.rpm
-            retryCommand 5 10 'yum install -y puppet-agent git'
+            retryCommand 5 10 'yum install -y puppet-agent git docker aws-cli aws-cfn-bootstrap'
             export PATH=$PATH:/opt/aws/bin/:/opt/puppetlabs/bin/:/opt/puppetlabs/puppet/bin/
             retryCommand 5 10  'aws s3 cp "s3://${S3Path}/scripts/puppet-${pupver}.tar" .'
             tar -C /etc/puppetlabs/ -xvf puppet-${pupver}.tar
             retryCommand 5 10 'puppet apply --test /etc/puppetlabs/code/environments/production/manifests/site.pp'
-            sleep 30
+            retryCommand 5 10 'aws s3 cp "s3://${S3Path}/scripts/jenkins/mount_volume-${ver}.sh" - | bash -l -s -- --hostname jenkins'
+            usermod -aG docker jenkins
+            systemctl enable docker
+            systemctl start docker
+            systemctl restart jenkins
+            sleep 20
             curl -sS http://localhost:8080 | grep 'Authentication required'
             cfn-signal -e $? --stack ${AWS::StackName} --resource JenkinsAutoScalingGroup --region ${AWS::Region}
           - ver: !Ref MountScriptVersion
