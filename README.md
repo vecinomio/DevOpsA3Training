@@ -1,6 +1,6 @@
 # DevOpsA3Training
 
-![DevOps A3 Cloud Architecture V3 (1)](https://user-images.githubusercontent.com/23032052/68381416-59976580-015a-11ea-8b66-5352442be2c7.png)
+![DevOps A3 Cloud Architecture V3 (2)](https://user-images.githubusercontent.com/37980289/70692526-2f3e4800-1cc4-11ea-8e3b-7433ee45ac96.png)
 
 
 ## Description:
