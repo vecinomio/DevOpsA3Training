@@ -12,7 +12,7 @@ This instruction provides:
   - how to create WebApp layer in custom VPC using:
     * AutoScalingGroup with EC2 Instances
       or
-    * ECS cluster with Docker containers, including:*
+    * ECS cluster with Docker containers, including:
       * ECR-repo Stack in custom VPC;
       * ECS-cluster Stack in custom VPC;
       * ECS-task Stack in custom VPC.
@@ -45,7 +45,7 @@ This instruction provides:
       * The number of VM instances are scaling depends on traffic load;
       * If one WebApp server falls, ASG will create new one.
 
-  * ECS cluster with Docker containers:*
+  * ECS cluster with Docker containers:
       * ECS Cluster with ASG for container instances;
       * ECS Task: Deploy a service on ECS, hosted in a private subnet, but accessible via a public load balancer.
 
@@ -160,11 +160,8 @@ This instruction provides:
 
        $ aws cloudformation deploy --stack-name ECS-cluster --template-file ops/cloudformation/ECS/ecs-cluster.yml --parameter-overrides VPCStackName=${VPCStackName} HostedZoneName=${HostedZoneName} Environment=${Environment} ECSAMI=${ECSAMI} --capabilities CAPABILITY_IAM
 
-5. Validate ecs-task template and Create ECS-task Stack:*
+5. Validate ecs-task template and Create ECS-task Stack:
 
        $ aws cloudformation validate-template --template-body file://ops/cloudformation/ECS/ecs-task.yml
 
        $ aws cloudformation deploy --stack-name ECS-task --template-file ops/cloudformation/ECS/ecs-task.yml --parameter-overrides VPCStackName=${VPCStackName}
-
-#TODO*:
-   - Merge the rest part of ECS infrastructure (https://github.com/IYermakov/DevOpsA3Training/issues/31).
