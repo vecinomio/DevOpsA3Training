@@ -1,5 +1,5 @@
-# Creates VPC stack with one public and two private subnets (one in each AZ),
-# and NAT Gateway
+# Creates VPC stack with two public and two private subnets (one in each AZ),
+# and NAT Gateways
 #
 # For manual creation/update use:
 # aws cloudformation deploy --stack-name <stack name>               \
@@ -30,19 +30,22 @@
       Public0:
         Dev: "172.16.0.0/24"
         Prod: "10.0.0.0/24"
-      Private0:
+      Public1:
         Dev: "172.16.1.0/24"
         Prod: "10.0.1.0/24"
+      Private0:
+        Dev: "172.16.100.0/24"
+        Prod: "10.0.100.0/24"
       Private1:
-        Dev: "172.16.2.0/24"
-        Prod: "10.0.2.0/24"
+        Dev: "172.16.101.0/24"
+        Prod: "10.0.101.0/24"
 
     AZRegions:
       us-east-1:
-        PublicAZs: [ "a" ]
+        PublicAZs: [ "a", "b" ]
         PrivateAZs: [ "a", "b" ]
       us-west-1:
-        PublicAZs: [ "a" ]
+        PublicAZs: [ "a", "b" ]
         PrivateAZs: [ "a", "b" ]
 
   Resources:
@@ -73,7 +76,23 @@
           - Key: "Environment"
             Value: !Ref Environment
           - Key: "Name"
-            Value: "Public"
+            Value: "Public0"
+
+    PublicSubnet1:
+      Type: "AWS::EC2::Subnet"
+      Properties:
+        VpcId: !Ref "VPC"
+        AvailabilityZone:
+          !Sub
+            - "${AWS::Region}${AZ}"
+            - AZ: !Select [ 1, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PublicAZs" ] ]
+        CidrBlock: !FindInMap [ "SubnetConfig", "Public1", !Ref Environment ]
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "Public1"
 
     PrivateSubnet0:
       Type: "AWS::EC2::Subnet"
@@ -97,7 +116,7 @@
         AvailabilityZone:
           !Sub
             - "${AWS::Region}${AZ}"
-            - AZ: !Select [ 0, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
+            - AZ: !Select [ 1, !FindInMap [ "AZRegions", !Ref "AWS::Region", "PrivateAZs" ] ]
         CidrBlock: !FindInMap [ "SubnetConfig", "Private1", !Ref Environment ]
         Tags:
           - Key: "Environment"
@@ -144,6 +163,12 @@
         SubnetId: !Ref "PublicSubnet0"
         RouteTableId: !Ref "PublicRouteTable"
 
+    PublicSubnetRouteTableAssociation1:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId: !Ref "PublicSubnet1"
+        RouteTableId: !Ref "PublicRouteTable"
+
     PublicNetworkAcl:
       Type: "AWS::EC2::NetworkAcl"
       Properties:
@@ -186,7 +211,19 @@
         SubnetId: !Ref "PublicSubnet0"
         NetworkAclId: !Ref "PublicNetworkAcl"
 
+    PublicSubnetNetworkAclAssociation1:
+      Type: "AWS::EC2::SubnetNetworkAclAssociation"
+      Properties:
+        SubnetId: !Ref "PublicSubnet1"
+        NetworkAclId: !Ref "PublicNetworkAcl"
+
     ElasticIP0:
+      Type: "AWS::EC2::EIP"
+      Properties:
+        Domain: "vpc"
+      DependsOn: InternetGateway
+
+    ElasticIP1:
       Type: "AWS::EC2::EIP"
       Properties:
         Domain: "vpc"
@@ -200,6 +237,25 @@
             - "ElasticIP0"
             - "AllocationId"
         SubnetId: !Ref "PublicSubnet0"
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "NAT0"
+
+    NATGateway1:
+      Type: "AWS::EC2::NatGateway"
+      Properties:
+        AllocationId:
+          Fn::GetAtt:
+            - "ElasticIP1"
+            - "AllocationId"
+        SubnetId: !Ref "PublicSubnet1"
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "NAT1"
 
     PrivateRouteTable0:
       Type: "AWS::EC2::RouteTable"
@@ -209,7 +265,17 @@
           - Key: "Environment"
             Value: !Ref Environment
           - Key: "Name"
-            Value: "PrivateRT"
+            Value: "PrivateRT0"
+
+    PrivateRouteTable1:
+      Type: "AWS::EC2::RouteTable"
+      Properties:
+        VpcId: !Ref "VPC"
+        Tags:
+          - Key: "Environment"
+            Value: !Ref Environment
+          - Key: "Name"
+            Value: "PrivateRT1"
 
     PrivateRouteToInternet0:
       Type: "AWS::EC2::Route"
@@ -217,6 +283,13 @@
         RouteTableId: !Ref "PrivateRouteTable0"
         DestinationCidrBlock: "0.0.0.0/0"
         NatGatewayId: !Ref "NATGateway0"
+
+    PrivateRouteToInternet1:
+      Type: "AWS::EC2::Route"
+      Properties:
+        RouteTableId: !Ref "PrivateRouteTable1"
+        DestinationCidrBlock: "0.0.0.0/0"
+        NatGatewayId: !Ref "NATGateway1"
 
     PrivateSubnetRouteTableAssociation0:
       Type: "AWS::EC2::SubnetRouteTableAssociation"
@@ -228,7 +301,7 @@
       Type: "AWS::EC2::SubnetRouteTableAssociation"
       Properties:
         SubnetId: !Ref "PrivateSubnet1"
-        RouteTableId: !Ref "PrivateRouteTable0"
+        RouteTableId: !Ref "PrivateRouteTable1"
 
   Outputs:
     VPC:
@@ -250,6 +323,12 @@
       Value: !Ref "PublicSubnet0"
       Export:
         Name: !Sub "${AWS::StackName}-PublicSubnet0"
+
+    PublicSubnet1:
+      Description: "SubnetId of public subnet 1"
+      Value: !Ref "PublicSubnet1"
+      Export:
+        Name: !Sub "${AWS::StackName}-PublicSubnet1"
 
     PrivateSubnet0:
       Description: "SubnetId of private subnet 0"
